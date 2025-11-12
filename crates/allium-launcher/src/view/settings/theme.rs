@@ -575,6 +575,28 @@ impl Theme {
             12,
         );
 
+        let button_hints_rect = button_hints.bounding_box(&styles);
+        let list_height = (button_hints_rect.y - y) as u32;
+
+        let mut list = SettingsList::new(
+            res.clone(),
+            Rect::new(
+                x + styles.ui.margin_x,
+                y,
+                w - styles.ui.margin_x as u32 * 2,
+                list_height,
+            ),
+            left,
+            right,
+            res.get::<Stylesheet>().ui.ui_font.size + styles.ui.padding_y as u32,
+        );
+        if let Some(state) = state {
+            list.select(state.selected);
+        }
+
+        drop(styles);
+        drop(locale);
+
         Self {
             rect,
             stylesheet,
