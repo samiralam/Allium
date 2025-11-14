@@ -1,7 +1,7 @@
 lang-de-DE = Deutsch
 lang-en-GB = English (United Kingdom)
 lang-en-US = English (United States)
-lang-es-CO = Español (Latino)
+lang-es-LA = Español (Latino)
 lang-es-ES = Español (España)
 lang-fr-FR = Français
 lang-id-ID = Bahasa Indonesia

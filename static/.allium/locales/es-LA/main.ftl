@@ -1,32 +1,32 @@
 # Launcher
 tab-recents = Recientes
 tab-games = Juegos
-tab-apps = Aplicaciones
-tab-settings = Ajustes
+tab-apps = Apps
+tab-settings = Configuración
 
-sort-alphabetical = Orden: A-Z
-sort-last-played = Orden: Recientes
-sort-most-played = Orden: Más jugados
-sort-rating = Orden: Calificación
-sort-release-date = Orden: Fecha de lanzamiento
-sort-random = Orden: Aleatorio
+sort-alphabetical = Ordenar: A-Z
+sort-last-played = Ordenar: Recientes
+sort-most-played = Ordenar: Tiempo de Juego
+sort-rating = Ordenar: Calificación
+sort-release-date = Ordenar: Fecha de Lanzamiento
+sort-random = Ordenar: Al azar
 sort-search = Buscar
-sort-favorites = Orden: Favoritos
+sort-favorites = Ordenar: Favoritos
 
 no-recent-games = Juega un juego para empezar
 
 populating-database = Creando la base de datos...
-    Esto puede tomar un tiempo.
+    Esto puede demorar un tiempo.
     Hazte un cafe!
 populating-games = Actualizando juegos... ({ $directory })
 
-menu-set-as-favorite = Añadir a Favoritos
+menu-set-as-favorite = Agregar a Favoritos
 menu-unset-as-favorite = Quitar de Favoritos
 menu-launch = Iniciar
 menu-launch-with-core = Iniciar con { $core }
-menu-reset = Resetear partida guardada
-menu-remove-from-recents = Quitar de juegos recientes
-menu-repopulate-database = Actualizar la base de datos
+menu-reset = Reiniciar
+menu-remove-from-recents = Remover de Recientes
+menu-repopulate-database = Actualizar Base de Datos
 
 settings-wifi = Wi-Fi
 settings-wifi-wifi-enabled = Wi-Fi
@@ -34,10 +34,10 @@ settings-wifi-ip-address = Direccion IP
 settings-wifi-wifi-network = Nombre de Wi-Fi
 settings-wifi-wifi-password = Contraseña Wi-Fi
 settings-wifi-ntp-enabled = NTP Activado
-settings-wifi-web-file-explorer = Explorador de Archivos Web
-settings-wifi-telnet-enabled = Telnet Activado
-settings-wifi-ftp-enabled = FTP Activado
-settings-wifi-syncthing = Syncthing Activado
+settings-wifi-web-file-explorer = Navegador de Archivos Web
+settings-wifi-telnet-enabled = Telnet Habilitado
+settings-wifi-ftp-enabled = FTP Habilitado
+settings-wifi-syncthing = Syncthing Habilitado
 settings-wifi-connecting= Conectando...
 
 settings-clock = Fecha y Hora
@@ -60,19 +60,19 @@ settings-theme-show-battery-level = Porcentaje de Batería
 settings-theme-show-clock = Reloj
 settings-theme-use-recents-carousel = Carrusel de Recientes
 settings-theme-boxart-width = Ancho de Boxart
-settings-theme-ui-font = Fuente del Menú
-settings-theme-ui-font-size = Tamaño de Fuente del Menú
-settings-theme-guide-font = Fuente para las Guías
-settings-theme-guide-font-size = Tamaño de Fuente para Guías
-settings-theme-tab-font-size = Tamaño de Fuente Pestaña
-settings-theme-status-bar-font-size = Tamaño de Fuente Barra
-settings-theme-button-hint-font-size = Tamaño de Fuente Sugerencia
-settings-theme-highlight-color = Realce de Color
+settings-theme-ui-font = Fuente UI
+settings-theme-ui-font-size = Tamaño de Fuente UI
+settings-theme-guide-font = Fuente de Guía
+settings-theme-guide-font-size = Tamaño Fuente de Guía
+settings-theme-tab-font-size = Tamaño Fuente Pestaña
+settings-theme-status-bar-font-size = Tamaño Fuente Barra
+settings-theme-button-hint-font-size = Tamaño Fuente Sugerencia
+settings-theme-highlight-color = Color de Resaltado
 settings-theme-foreground-color = Color Principal
 settings-theme-background-color = Color Fondo
-settings-theme-disabled-color = Color para Deshabilitado
+settings-theme-disabled-color = Color Deshabilitado
 settings-theme-tab-color = Color Pestaña
-settings-theme-tab-selected-color = Color Pestaña Activa
+settings-theme-tab-selected-color = Color Pestaña Seleccionado
 settings-theme-button-a-color = Color Boton A
 settings-theme-button-b-color = Color Boton B
 settings-theme-button-x-color = Color Boton X
@@ -104,7 +104,7 @@ settings-about-unknown-value = Desconocido
 
 settings-needs-restart-for-effect =
     Necesitas reiniciar el dispositivo
-    para que los cambios surtan
+    para que los cambios toman
     efecto.
 
 # Menu
@@ -112,7 +112,7 @@ ingame-menu-continue = Continuar
 ingame-menu-save = Guardar
 ingame-menu-load = Cargar
 ingame-menu-reset = Reinciar
-ingame-menu-settings = Ajustes
+ingame-menu-settings = Configuración
 ingame-menu-guide = Guía
 ingame-menu-quit = Salir
 ingame-menu-slot = Slot { $slot }
@@ -124,24 +124,24 @@ guide-button-next = Siguiente
 guide-button-prev = Anterior
 
 # Hotkeys
-hotkeys-global = Hotkeys Generales:
-hotkeys-screenshot = Screenshot
+hotkeys-global = Teclas Acceso Rápido:
+hotkeys-screenshot = Pantallazo
 hotkeys-volume-down = Volumen -
 hotkeys-volume-up = Volumen +
 hotkeys-brightness-down = Brillo -
 hotkeys-brightness-up = Brillo +
 
-hotkeys-ingame = Hotkeys en el Juego:
-hotkeys-toggle-aspect-ratio =Cambiar Relación de Aspecto
+hotkeys-ingame = Teclas Acceso Rápido en el Juego:
+hotkeys-toggle-aspect-ratio = Cambiar Relación de Aspecto
 hotkeys-toggle-fps = FPS
 
 # Common
-button-back = Atrás
+button-back = Volver
 button-confirm = Confirmar
-button-edit = OK
+button-edit = Editar
 button-select = Seleccionar
 button-launch = Lanzar
-button-sort = Orden
+button-sort = Ordenar
 button-edit-search = Editar Búsqueda
 
 keyboard-button-backspace = Borrar
