@@ -43,7 +43,7 @@ impl UpdateStatus {
             ),
             UpdateStatus::Ready => locale.t("settings-system-update-restart-to-update"),
             UpdateStatus::UpToDate => locale.t("settings-system-update-up-to-date"),
-            UpdateStatus::Error(msg) => format!("{}", msg),
+            UpdateStatus::Error(msg) => msg.to_string(),
         }
     }
 }
@@ -330,11 +330,13 @@ impl SystemUpdate {
                 }
                 ota::DownloadEvent::Completed => {
                     // Download completed successfully
-                    info!("Download verification complete");
+                    info!("Download verification complete, rebooting to apply update");
                     let _ = fs::remove_file("/tmp/stay_awake");
                     self.update_status = UpdateStatus::Ready;
                     self.update_status_label();
                     self.download_rx = None;
+                    // Reboot to apply the update
+                    let _ = std::process::Command::new("shutdown").arg("-r").spawn();
                 }
                 ota::DownloadEvent::Error(msg) => {
                     // Download failed
