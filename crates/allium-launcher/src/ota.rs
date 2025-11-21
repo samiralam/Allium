@@ -101,9 +101,10 @@ pub async fn check_for_update(channel: UpdateChannel) -> Result<Option<GitHubRel
         UpdateChannel::Stable => get_latest_stable_release().await?,
         UpdateChannel::Nightly => get_latest_nightly_release().await?,
     };
-    info!("Latest version: {}", release.tag_name);
+    let latest_version = get_release_version(&release).await;
+    info!("Latest version: {}", latest_version);
 
-    if current_version != release.tag_name {
+    if current_version != latest_version {
         Ok(Some(release))
     } else {
         Ok(None)
