@@ -108,7 +108,7 @@ jobs:
         run: |
           make all
           cd dist
-          zip -r ../allium-${{ matrix.target }}.zip .allium .tmp_update RetroArch Apps BIOS Roms Saves
+          zip -r ../allium-${{ matrix.target }}.zip .allium .tmp_update RetroArch Apps BIOS Roms Saves Themes
           cd -
 
       - name: Publish
@@ -152,7 +152,7 @@ jobs:
         run: |
           make all
           cd dist
-          zip -r ../allium-${{ matrix.target }}.zip .allium .tmp_update RetroArch Apps BIOS Roms Saves
+          zip -r ../allium-${{ matrix.target }}.zip .allium .tmp_update RetroArch Apps BIOS Roms Saves Themes
           cd -
 
       - name: Delete old nightly release
