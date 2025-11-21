@@ -10,7 +10,7 @@ GLIBC_VERSION := 2.28
 -include local.mk
 
 .PHONY: all
-all: dist build package-build $(DIST_DIR)/RetroArch/retroarch $(DIST_DIR)/.allium/bin/dufs $(DIST_DIR)/.allium/bin/syncthing $(DIST_DIR)/.allium/cores/drastic/drastic migrations strip-all
+all: dist build package-build $(DIST_DIR)/RetroArch/retroarch $(DIST_DIR)/.allium/bin/dufs $(DIST_DIR)/.allium/bin/syncthing $(DIST_DIR)/.allium/cores/drastic/drastic $(DIST_DIR)/Themes migrations strip-all
 
 .PHONY: clean
 clean:
@@ -18,9 +18,15 @@ clean:
 	# Needs sudo because RetroArch build runs in docker as root
 	cd $(RETROARCH) && sudo make clean || true
 
-simulator-env:
+simulator-env: simulator/Themes
 	mkdir -p simulator
 	rsync -ar static/ simulator/
+
+simulator/Themes:
+	TEMP_DIR=$$(mktemp -d) && \
+		git clone --depth 1 "$(THEMES_URL)" "$$TEMP_DIR" && \
+		rsync -a "$$TEMP_DIR/Themes/" "simulator/Themes/" && \
+		rm -rf "$$TEMP_DIR"
 
 .PHONY: simulator
 simulator: simulator-env
@@ -108,6 +114,13 @@ $(DIST_DIR)/.allium/cores/drastic/drastic:
 	mkdir -p $(DIST_DIR)/.allium/cores/drastic
 	unzip -o /tmp/drastic.zip -d $(DIST_DIR)/.allium/cores/drastic
 	rm /tmp/drastic.zip
+
+THEMES_URL := https://github.com/goweiwen/Allium-Themes.git
+$(DIST_DIR)/Themes:
+	TEMP_DIR=$$(mktemp -d) && \
+		git clone --depth 1 "$(THEMES_URL)" "$$TEMP_DIR" && \
+		rsync -a "$$TEMP_DIR/Themes/" "$(DIST_DIR)/Themes/" && \
+		rm -rf "$$TEMP_DIR"
 
 .PHONY: lint
 lint:
