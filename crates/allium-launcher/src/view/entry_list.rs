@@ -91,7 +91,7 @@ where
                 x + styles.ui.margin_x,
                 y,
                 if styles.games.boxart_width > 0 {
-                    w - styles.games.boxart_width - styles.ui.margin_x as u32 * 4
+                    w - styles.games.boxart_width - styles.ui.margin_x as u32 * 3
                 } else {
                     w - styles.ui.margin_x as u32 * 2
                 },
@@ -104,8 +104,8 @@ where
 
         let mut image = Image::empty(
             Rect::new(
-                x + w as i32 - styles.games.boxart_width as i32 - styles.ui.margin_x * 2,
-                y + styles.ui.margin_y,
+                x + w as i32 - styles.games.boxart_width as i32 - styles.ui.margin_x,
+                y,
                 styles.games.boxart_width,
                 list_height,
             ),
