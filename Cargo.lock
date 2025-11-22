@@ -104,6 +104,7 @@ dependencies = [
 name = "alliumd"
 version = "0.29.0"
 dependencies = [
+ "allium-menu",
  "anyhow",
  "chrono",
  "common",
@@ -509,6 +510,7 @@ dependencies = [
  "lazy_static",
  "log",
  "nix 0.29.0",
+ "parking_lot",
  "rusqlite",
  "rusqlite_migration",
  "rusttype",

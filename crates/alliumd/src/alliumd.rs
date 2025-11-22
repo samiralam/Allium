@@ -1,15 +1,16 @@
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
+use std::thread::JoinHandle;
 use std::time::Instant;
 
+use allium_menu::{AlliumMenu, RetroArchInfo};
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
 use common::battery::Battery;
 use common::constants::{
-    ALLIUM_GAME_INFO, ALLIUM_MENU, ALLIUM_SD_ROOT, ALLIUM_VERSION, ALLIUMD_STATE,
-    BATTERY_SHUTDOWN_THRESHOLD, BATTERY_UPDATE_INTERVAL, BATTERY_WARNING_THRESHOLD, IDLE_TIMEOUT,
-    LONG_PRESS_DURATION,
+    ALLIUM_GAME_INFO, ALLIUM_SD_ROOT, ALLIUM_VERSION, ALLIUMD_STATE, BATTERY_SHUTDOWN_THRESHOLD,
+    BATTERY_UPDATE_INTERVAL, BATTERY_WARNING_THRESHOLD, IDLE_TIMEOUT, LONG_PRESS_DURATION,
 };
 use common::display::settings::DisplaySettings;
 use common::locale::{Locale, LocaleSettings};
@@ -39,11 +40,10 @@ pub struct AlliumDState {
     brightness: u8,
 }
 
-#[derive(Debug)]
 pub struct AlliumD<P: Platform> {
     platform: P,
     main: Child,
-    menu: Option<Child>,
+    menu: Option<JoinHandle<Result<()>>>,
     keys: EnumMap<Key, bool>,
     is_menu_pressed_alone: bool,
     pressed_menu: Instant,
@@ -186,12 +186,26 @@ impl AlliumD<DefaultPlatform> {
             let mut battery_led_task = None;
 
             loop {
-                if let Some(menu) = self.menu.as_mut()
-                    && menu.try_wait()?.is_some()
-                {
-                    info!("menu process terminated, resuming game");
-                    self.menu = None;
-                    RetroArchCommand::Unpause.send().await?;
+                if let Some(handle) = self.menu.as_ref() {
+                    if handle.is_finished() {
+                        let handle = self.menu.take().unwrap();
+                        match handle.join() {
+                            Ok(Ok(())) => {
+                                info!("menu thread completed");
+                                // Menu has already sent RetroArch commands as needed
+                                // Just unpause to resume the game
+                                RetroArchCommand::Unpause.send().await?;
+                            }
+                            Ok(Err(e)) => {
+                                error!("menu thread failed: {:?}", e);
+                                RetroArchCommand::Unpause.send().await?;
+                            }
+                            Err(_) => {
+                                error!("menu thread panicked");
+                                RetroArchCommand::Unpause.send().await?;
+                            }
+                        }
+                    }
                 }
 
                 if battery_interval.elapsed() >= BATTERY_UPDATE_INTERVAL {
@@ -274,8 +288,8 @@ impl AlliumD<DefaultPlatform> {
 
     async fn handle_key_event(&mut self, key_event: KeyEvent) -> Result<()> {
         debug!(
-            "menu: {:?}, main: {:?}, ingame: {}, key_event: {:?}",
-            self.menu.as_ref().map(tokio::process::Child::id),
+            "menu_active: {}, main: {:?}, ingame: {}, key_event: {:?}",
+            self.menu.is_some(),
             self.main.id(),
             self.is_ingame(),
             key_event
@@ -316,17 +330,13 @@ impl AlliumD<DefaultPlatform> {
                         #[cfg(unix)]
                         {
                             signal(&self.main, Signal::SIGSTOP)?;
-                            if let Some(menu) = self.menu.as_mut() {
-                                signal(menu, Signal::SIGSTOP)?;
-                            }
+                            // Note: Can't signal a thread, but menu will be blocked
+                            // on input anyway while show-hotkeys is running
                         }
                         Command::new("show-hotkeys").spawn()?.wait().await?;
                         #[cfg(unix)]
                         {
                             signal(&self.main, Signal::SIGCONT)?;
-                            if let Some(menu) = self.menu.as_mut() {
-                                signal(menu, Signal::SIGCONT)?;
-                            }
                         }
                     }
                 }
@@ -412,12 +422,49 @@ impl AlliumD<DefaultPlatform> {
                             && let Some(game_info) = GameInfo::load()?
                         {
                             info!("toggling menu");
-                            if let Some(menu) = &mut self.menu {
-                                info!("terminating menu");
-                                terminate(menu).await?;
+                            if self.menu.is_some() {
+                                info!("menu already running, ignoring");
                             } else if game_info.has_menu {
                                 info!("pausing game and launching menu");
-                                self.menu = Some(Command::new(ALLIUM_MENU.as_path()).spawn()?);
+                                // Spawn menu in a new thread with its own tokio runtime
+                                let handle = std::thread::spawn(|| -> Result<()> {
+                                    let rt = tokio::runtime::Runtime::new()?;
+                                    rt.block_on(async {
+                                        // Get RetroArch info
+                                        let info = RetroArchCommand::GetInfo
+                                            .send_recv()
+                                            .await?
+                                            .map(|ret| {
+                                                let mut rets = ret.split_ascii_whitespace().skip(1);
+                                                let max_disk_slots = rets
+                                                    .next()
+                                                    .map_or(0, |s| s.parse().unwrap_or(0));
+                                                let disk_slot = rets
+                                                    .next()
+                                                    .map_or(0, |s| s.parse().unwrap_or(0));
+                                                let state_slot =
+                                                    rets.next().map(|s| s.parse().unwrap_or(0));
+                                                RetroArchInfo {
+                                                    max_disk_slots,
+                                                    disk_slot,
+                                                    state_slot,
+                                                }
+                                            });
+
+                                        if info.is_some() {
+                                            RetroArchCommand::Pause.send().await?;
+                                            tokio::time::sleep(std::time::Duration::from_millis(
+                                                50,
+                                            ))
+                                            .await;
+                                        }
+
+                                        let platform = common::platform::DefaultPlatform::new()?;
+                                        let mut app = AlliumMenu::new(platform, info).await?;
+                                        app.run_event_loop().await
+                                    })
+                                });
+                                self.menu = Some(handle);
                             }
                         }
                         self.is_menu_pressed_alone = false;
@@ -516,9 +563,9 @@ impl AlliumD<DefaultPlatform> {
         if self.is_ingame() {
             self.update_play_time()?;
 
-            if let Some(menu) = self.menu.as_mut() {
-                terminate(menu).await?;
-            }
+            // Menu thread will exit on its own when the process shuts down
+            // We just drop the handle
+            self.menu.take();
         }
 
         terminate(&mut self.main).await?;

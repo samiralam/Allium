@@ -79,10 +79,14 @@ impl AlliumMenu<DefaultPlatform> {
             #[cfg(unix)]
             tokio::select! {
                 _ = sigterm.recv() => {
-                    self.handle_command(Command::Exit).await?;
+                    if self.handle_command(Command::Exit).await? {
+                        return Ok(());
+                    }
                 }
                 Some(command) = rx.recv() => {
-                    self.handle_command(command).await?;
+                    if self.handle_command(command).await? {
+                        return Ok(());
+                    }
                 }
                 event = self.platform.poll() => {
                     let mut bubble = VecDeque::new();
@@ -94,7 +98,9 @@ impl AlliumMenu<DefaultPlatform> {
             #[cfg(not(unix))]
             tokio::select! {
                 Some(command) = rx.recv() => {
-                    self.handle_command(command).await?;
+                    if self.handle_command(command).await? {
+                        return Ok(());
+                    }
                 }
                 event = self.platform.poll() => {
                     let mut bubble = VecDeque::new();
@@ -105,7 +111,8 @@ impl AlliumMenu<DefaultPlatform> {
         }
     }
 
-    async fn handle_command(&mut self, command: Command) -> Result<()> {
+    /// Returns true if the menu should exit
+    async fn handle_command(&mut self, command: Command) -> Result<bool> {
         match command {
             Command::Exit => {
                 self.view.save()?;
@@ -113,7 +120,7 @@ impl AlliumMenu<DefaultPlatform> {
                     self.display.load(self.display.bounding_box().into())?;
                     self.display.flush()?;
                 }
-                std::process::exit(0);
+                return Ok(true);
             }
             Command::Redraw => {
                 self.display.load(self.display.bounding_box().into())?;
@@ -169,6 +176,6 @@ impl AlliumMenu<DefaultPlatform> {
                 warn!("unhandled command: {:?}", command);
             }
         }
-        Ok(())
+        Ok(false)
     }
 }

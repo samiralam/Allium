@@ -1,22 +1,16 @@
 #![deny(clippy::all)]
 #![warn(rust_2018_idioms)]
 
-mod allium_menu;
-mod retroarch_info;
-pub mod view;
-
 use std::time::Duration;
 
 use anyhow::Result;
 
-use allium_menu::AlliumMenu;
+use allium_menu::{AlliumMenu, RetroArchInfo};
 use common::{
     platform::{DefaultPlatform, Platform},
     retroarch::RetroArchCommand,
 };
 use simple_logger::SimpleLogger;
-
-use crate::retroarch_info::RetroArchInfo;
 
 #[tokio::main]
 async fn main() -> Result<()> {

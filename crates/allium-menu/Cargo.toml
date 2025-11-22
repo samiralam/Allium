@@ -7,6 +7,14 @@ license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+name = "allium_menu"
+path = "src/lib.rs"
+
+[[bin]]
+name = "allium-menu"
+path = "src/main.rs"
+
 [features]
 simulator = ["common/simulator"]
 miyoo = ["common/miyoo"]
