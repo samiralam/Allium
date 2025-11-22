@@ -44,7 +44,9 @@ async fn main() -> Result<()> {
     }
 
     let platform = DefaultPlatform::new()?;
-    let mut app = AlliumMenu::new(platform, info).await?;
+    let mut app = AlliumMenu::new(platform).await?;
+    app.prepare(info).await?;
     app.run_event_loop().await?;
+    app.save()?;
     Ok(())
 }

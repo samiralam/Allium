@@ -21,9 +21,6 @@ use type_map::TypeMap;
 use crate::retroarch_info::RetroArchInfo;
 use crate::view::ingame_menu::IngameMenu;
 
-#[cfg(unix)]
-use tokio::signal::unix::SignalKind;
-
 pub struct AlliumMenu<P>
 where
     P: Platform,
@@ -35,7 +32,7 @@ where
 }
 
 impl AlliumMenu<DefaultPlatform> {
-    pub async fn new(mut platform: DefaultPlatform, info: Option<RetroArchInfo>) -> Result<Self> {
+    pub async fn new(mut platform: DefaultPlatform) -> Result<Self> {
         let display = platform.display()?;
         let battery = platform.battery()?;
         let rect = display.bounding_box().into();
@@ -52,8 +49,27 @@ impl AlliumMenu<DefaultPlatform> {
             platform,
             display,
             res: res.clone(),
-            view: IngameMenu::load_or_new(rect, res, battery, info).await?,
+            view: IngameMenu::load_or_new(rect, res, battery, None).await?,
         })
+    }
+
+    /// Prepare the menu for a new session with fresh RetroArchInfo.
+    /// Call this before run_event_loop to refresh game info and state.
+    pub async fn prepare(&mut self, info: Option<RetroArchInfo>) -> Result<()> {
+        // Refresh game info in case it changed
+        self.res.insert(GameInfo::load()?.unwrap_or_default());
+
+        // Recreate the view with fresh info
+        let rect = self.display.bounding_box().into();
+        let battery = self.platform.battery()?;
+        self.view = IngameMenu::load_or_new(rect, self.res.clone(), battery, info).await?;
+
+        Ok(())
+    }
+
+    /// Save the menu state. Call this after run_event_loop returns.
+    pub fn save(&mut self) -> Result<()> {
+        self.view.save()
     }
 
     pub async fn run_event_loop(&mut self) -> Result<()> {
@@ -66,9 +82,6 @@ impl AlliumMenu<DefaultPlatform> {
         }
         self.display.save()?;
 
-        #[cfg(unix)]
-        let mut sigterm = tokio::signal::unix::signal(SignalKind::terminate())?;
-
         let (tx, mut rx) = tokio::sync::mpsc::channel(100);
 
         loop {
@@ -78,11 +91,6 @@ impl AlliumMenu<DefaultPlatform> {
 
             #[cfg(unix)]
             tokio::select! {
-                _ = sigterm.recv() => {
-                    if self.handle_command(Command::Exit).await? {
-                        return Ok(());
-                    }
-                }
                 Some(command) = rx.recv() => {
                     if self.handle_command(command).await? {
                         return Ok(());
@@ -116,10 +124,10 @@ impl AlliumMenu<DefaultPlatform> {
         match command {
             Command::Exit => {
                 self.view.save()?;
-                if self.display.pop() {
-                    self.display.load(self.display.bounding_box().into())?;
-                    self.display.flush()?;
-                }
+                // Pop all saved display states
+                while self.display.pop() {}
+                self.display.load(self.display.bounding_box().into())?;
+                self.display.flush()?;
                 return Ok(true);
             }
             Command::Redraw => {

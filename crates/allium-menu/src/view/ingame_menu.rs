@@ -531,6 +531,11 @@ where
         commands: Sender<Command>,
         bubble: &mut VecDeque<Command>,
     ) -> Result<bool> {
+        if event == KeyEvent::Pressed(Key::Menu) {
+            commands.send(Command::Exit).await?;
+            return Ok(true);
+        }
+
         match self.child.as_mut() {
             Some(ChildView::TextReader(reader)) => {
                 if reader
