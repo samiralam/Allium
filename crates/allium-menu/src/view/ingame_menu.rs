@@ -19,8 +19,8 @@ use common::resources::Resources;
 use common::retroarch::RetroArchCommand;
 use common::stylesheet::Stylesheet;
 use common::view::{
-    ButtonHint, ButtonHints, ButtonIcon, Image, ImageMode, Label, NullView, ScrollList,
-    SettingsList, StatusBar, View,
+    ButtonHint, ButtonHints, Image, ImageMode, Label, NullView, ScrollList, SettingsList,
+    StatusBar, View,
 };
 use log::warn;
 use serde::{Deserialize, Serialize};
@@ -71,7 +71,7 @@ where
         battery: B,
         retroarch_info: Option<RetroArchInfo>,
     ) -> Self {
-        let Rect { x, y, w, h } = rect;
+        let Rect { x, y, w, .. } = rect;
 
         let game_info = res.get::<GameInfo>();
         let locale = res.get::<Locale>();
@@ -90,17 +90,46 @@ where
             battery,
         );
 
+        let mut button_hints = ButtonHints::new(
+            res.clone(),
+            vec![ButtonHint::new(
+                res.clone(),
+                Point::zero(),
+                Key::Menu,
+                locale.t("ingame-menu-continue"),
+                Alignment::Left,
+            )],
+            vec![
+                ButtonHint::new(
+                    res.clone(),
+                    Point::zero(),
+                    Key::A,
+                    locale.t("button-select"),
+                    Alignment::Right,
+                ),
+                ButtonHint::new(
+                    res.clone(),
+                    Point::zero(),
+                    Key::B,
+                    locale.t("button-back"),
+                    Alignment::Right,
+                ),
+            ],
+        );
+
+        let button_hints_rect = button_hints.bounding_box(&styles);
+        let content_top =
+            y + styles.ui.margin_y + styles.ui.margin_y / 2 + styles.ui.ui_font.size as i32;
+        let content_height = (button_hints_rect.y - content_top) as u32;
+
         let entries = MenuEntry::entries(retroarch_info.as_ref(), !game_info.guides.is_empty());
         let mut menu = SettingsList::new(
             res.clone(),
             Rect::new(
                 x + styles.ui.margin_x,
-                y + styles.ui.margin_y + ButtonIcon::diameter(&styles) as i32 + 8,
-                w - SAVE_STATE_IMAGE_WIDTH
-                    - styles.ui.margin_y as u32
-                    - styles.ui.margin_y as u32
-                    - styles.ui.margin_y as u32 * 2,
-                h - ButtonIcon::diameter(&styles) - styles.ui.margin_y as u32 * 2,
+                content_top,
+                w - SAVE_STATE_IMAGE_WIDTH - styles.ui.margin_y as u32 * 3,
+                content_height,
             ),
             entries.iter().map(|e| e.as_str(&locale)).collect(),
             entries
@@ -129,45 +158,14 @@ where
         let mut image = Image::empty(
             Rect::new(
                 x + w as i32 - SAVE_STATE_IMAGE_WIDTH as i32 - styles.ui.margin_y * 2,
-                y + styles.ui.margin_y + styles.ui.ui_font.size as i32 + 8,
+                content_top,
                 SAVE_STATE_IMAGE_WIDTH,
-                h - styles.ui.margin_x as u32
-                    - styles.ui.ui_font.size
-                    - styles.ui.margin_x as u32
-                    - ButtonIcon::diameter(&styles)
-                    - styles.ui.margin_x as u32,
+                content_height,
             ),
             ImageMode::Contain,
         );
         image.set_border_radius(12);
         image.set_alignment(Alignment::Right);
-
-        let button_hints = ButtonHints::new(
-            res.clone(),
-            vec![ButtonHint::new(
-                res.clone(),
-                Point::zero(),
-                Key::Menu,
-                locale.t("ingame-menu-continue"),
-                Alignment::Left,
-            )],
-            vec![
-                ButtonHint::new(
-                    res.clone(),
-                    Point::zero(),
-                    Key::A,
-                    locale.t("button-select"),
-                    Alignment::Right,
-                ),
-                ButtonHint::new(
-                    res.clone(),
-                    Point::zero(),
-                    Key::B,
-                    locale.t("button-back"),
-                    Alignment::Right,
-                ),
-            ],
-        );
 
         let mut child = None;
         if state.is_text_reader_open {
@@ -211,9 +209,9 @@ where
                     res.clone(),
                     Rect::new(
                         x + styles.ui.margin_x,
-                        y + styles.ui.margin_y + ButtonIcon::diameter(&styles) as i32 + 8,
+                        content_top,
                         w - styles.ui.margin_x as u32 * 2,
-                        h - ButtonIcon::diameter(&styles) - styles.ui.margin_y as u32 * 3,
+                        (button_hints_rect.y - content_top - styles.ui.margin_y * 2) as u32,
                     ),
                     guide_names.clone(),
                     Alignment::Left,
@@ -336,18 +334,16 @@ where
                                 .map(|s| s.to_string())
                         })
                         .collect();
+                    let button_hints_rect = self.button_hints.bounding_box(&styles);
+                    let content_top =
+                        self.rect.y + styles.ui.margin_y + styles.ui.ui_font.size as i32 + 8;
                     let selector = ScrollList::new(
                         self.res.clone(),
                         Rect::new(
                             self.rect.x + styles.ui.margin_x,
-                            self.rect.y
-                                + styles.ui.margin_y
-                                + ButtonIcon::diameter(&styles) as i32
-                                + 8,
+                            content_top,
                             self.rect.w - styles.ui.margin_x as u32 * 2,
-                            self.rect.h
-                                - ButtonIcon::diameter(&styles)
-                                - styles.ui.margin_y as u32 * 3,
+                            (button_hints_rect.y - content_top - styles.ui.margin_y * 2) as u32,
                         ),
                         guide_names,
                         Alignment::Left,

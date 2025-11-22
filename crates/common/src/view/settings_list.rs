@@ -143,8 +143,7 @@ impl SettingsList {
 
     pub fn visible_count(&self) -> usize {
         let styles = self.res.get::<Stylesheet>();
-        ((self.rect.h as usize - styles.ui.margin_y as usize)
-            / (self.entry_height as usize + styles.ui.list_margin as usize))
+        (self.rect.h as usize / (self.entry_height as usize + styles.ui.list_margin as usize))
             .min(self.labels.len())
             .min(self.right.len())
     }

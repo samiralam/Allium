@@ -11,7 +11,7 @@ use common::locale::Locale;
 use common::platform::{DefaultPlatform, Key, KeyEvent, Platform};
 use common::resources::Resources;
 use common::stylesheet::Stylesheet;
-use common::view::{ButtonHint, ButtonHints, ButtonIcon, Label, SettingsList, View};
+use common::view::{ButtonHint, ButtonHints, Label, SettingsList, View};
 use embedded_graphics::prelude::OriginDimensions;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
@@ -28,24 +28,11 @@ pub struct ActivityTracker {
 
 impl ActivityTracker {
     pub fn new(rect: Rect, res: Resources) -> Result<Self> {
-        let Rect { x, y, w, h } = rect;
+        let Rect { x, y, w, .. } = rect;
 
         let styles = res.get::<Stylesheet>();
 
-        let list = SettingsList::new(
-            res.clone(),
-            Rect::new(
-                x + styles.ui.margin_x,
-                y,
-                w - styles.ui.margin_x as u32 * 2,
-                h - styles.ui.margin_y as u32 - ButtonIcon::diameter(&styles),
-            ),
-            Vec::new(),
-            Vec::new(),
-            res.get::<Stylesheet>().ui.ui_font.size + styles.ui.padding_y as u32,
-        );
-
-        let button_hints = {
+        let mut button_hints = {
             let locale = res.get::<Locale>();
             ButtonHints::new(
                 res.clone(),
@@ -68,6 +55,22 @@ impl ActivityTracker {
                 ],
             )
         };
+
+        let button_hints_rect = button_hints.bounding_box(&styles);
+        let list_height = (button_hints_rect.y - y) as u32;
+
+        let list = SettingsList::new(
+            res.clone(),
+            Rect::new(
+                x + styles.ui.margin_x,
+                y,
+                w - styles.ui.margin_x as u32 * 2,
+                list_height,
+            ),
+            Vec::new(),
+            Vec::new(),
+            res.get::<Stylesheet>().ui.ui_font.size + styles.ui.padding_y as u32,
+        );
 
         drop(styles);
 

@@ -13,8 +13,7 @@ use common::locale::Locale;
 use common::platform::{DefaultPlatform, Key, KeyEvent, Platform};
 use common::resources::Resources;
 use common::stylesheet::Stylesheet;
-use common::view::{ButtonHint, ButtonHints, View};
-use common::view::{ButtonIcon, Keyboard};
+use common::view::{ButtonHint, ButtonHints, Keyboard, View};
 use embedded_graphics::Drawable;
 use embedded_graphics::prelude::{Dimensions, Size};
 use embedded_graphics::primitives::{Primitive, PrimitiveStyle, Rectangle, RoundedRectangle};
@@ -107,13 +106,8 @@ impl TextReader {
             .ok();
     }
 
-    fn visible_text(&self, styles: &Stylesheet) -> Vec<&str> {
-        let line_count = (self.rect.h
-            - styles.ui.margin_y as u32
-            - styles.ui.margin_y as u32
-            - ButtonIcon::diameter(styles)
-            - styles.ui.margin_x as u32)
-            / styles.menu.guide_font.size;
+    fn visible_text(&self, styles: &Stylesheet, content_height: u32) -> Vec<&str> {
+        let line_count = content_height / styles.menu.guide_font.size;
         let mut lines = Vec::with_capacity(line_count as usize);
         let mut cursor = self.cursor;
         for _ in 0..line_count {
@@ -364,17 +358,17 @@ impl View for TextReader {
         let mut drawn = false;
 
         if self.dirty {
+            let button_hints_rect = self.button_hints.bounding_box(styles);
+            let content_top = self.rect.y + 12;
+            let content_height = (button_hints_rect.y - content_top - styles.ui.margin_x) as u32;
+
             display.load(display.bounding_box().into())?;
             RoundedRectangle::with_equal_corners(
                 <Rect as Into<Rectangle>>::into(Rect::new(
                     self.rect.x + styles.ui.margin_x,
-                    self.rect.y + 12,
+                    content_top,
                     self.rect.w - styles.ui.margin_x as u32 * 2,
-                    self.rect.h
-                        - styles.ui.margin_y as u32
-                        - styles.ui.margin_y as u32
-                        - ButtonIcon::diameter(styles)
-                        - styles.ui.margin_x as u32,
+                    content_height,
                 )),
                 Size::new_equal(8),
             )
@@ -388,8 +382,9 @@ impl View for TextReader {
                 .text_color(styles.ui.text_color)
                 .build();
 
-            let mut y = self.rect.y + 12 + 8;
-            for line in self.visible_text(styles) {
+            let visible_lines: Vec<&str> = self.visible_text(styles, content_height);
+            let mut y = content_top + 8;
+            for line in visible_lines {
                 let text = Text::new(
                     line,
                     Point::new(self.rect.x + styles.ui.margin_x + 12, y).into(),
@@ -406,10 +401,8 @@ impl View for TextReader {
                 ),
                 Point::new(
                     self.rect.x + self.rect.w as i32 - 16,
-                    self.rect.y + self.rect.h as i32
+                    content_top + content_height as i32
                         - styles.menu.guide_font.size as i32
-                        - styles.ui.margin_x
-                        - ButtonIcon::diameter(styles) as i32
                         - styles.ui.margin_x,
                 )
                 .into(),
