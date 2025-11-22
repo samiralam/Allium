@@ -94,7 +94,7 @@ struct GitTagObject {
 /// Check if an update is available for the given channel
 /// Returns the GitHubRelease if an update is available
 pub async fn check_for_update(channel: UpdateChannel) -> Result<Option<GitHubRelease>> {
-    let current_version = common::constants::ALLIUM_VERSION;
+    let current_version = &*common::constants::ALLIUM_VERSION;
     info!("Current version: {}", current_version);
 
     let release = match channel {
@@ -104,7 +104,7 @@ pub async fn check_for_update(channel: UpdateChannel) -> Result<Option<GitHubRel
     let latest_version = get_release_version(&release).await;
     info!("Latest version: {}", latest_version);
 
-    if current_version != latest_version {
+    if *current_version != latest_version {
         Ok(Some(release))
     } else {
         Ok(None)

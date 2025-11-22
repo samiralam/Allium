@@ -8,7 +8,12 @@ use lazy_static::lazy_static;
 
 use crate::geom::Size;
 
-pub const ALLIUM_VERSION: &str = env!("ALLIUM_VERSION");
+pub static ALLIUM_VERSION: LazyLock<String> = LazyLock::new(|| {
+    let version_path = ALLIUM_BASE_DIR.join("version.txt");
+    std::fs::read_to_string(&version_path)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|_| "unknown".to_string())
+});
 
 #[cfg(feature = "miyoo")]
 pub static ALLIUM_SD_ROOT: LazyLock<PathBuf> = LazyLock::new(|| {

@@ -116,7 +116,7 @@ impl SystemUpdate {
         labels.push(locale.t("settings-system-allium-version"));
         values.push(Box::new(Label::new(
             Point::zero(),
-            ALLIUM_VERSION,
+            ALLIUM_VERSION.clone(),
             Alignment::Right,
             None,
         )));
@@ -295,7 +295,7 @@ impl SystemUpdate {
                 }
                 VersionCheckEvent::UpToDate => {
                     info!("Already up to date");
-                    self.latest_version = Some(ALLIUM_VERSION.to_string());
+                    self.latest_version = Some(ALLIUM_VERSION.clone());
                     self.update_status = UpdateStatus::UpToDate;
                     self.version_check_rx = None;
                 }
@@ -379,7 +379,7 @@ impl SystemUpdate {
                     Ok(None) => {
                         info!("Already up to date");
                         // Set latest version to current version when up to date
-                        self.latest_version = Some(ALLIUM_VERSION.to_string());
+                        self.latest_version = Some(ALLIUM_VERSION.clone());
                         self.update_latest_version_label();
                         self.update_status = UpdateStatus::UpToDate;
                     }

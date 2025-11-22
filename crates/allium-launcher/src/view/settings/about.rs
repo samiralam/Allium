@@ -66,7 +66,7 @@ impl About {
             vec![
                 Box::new(Label::new(
                     Point::zero(),
-                    ALLIUM_VERSION,
+                    ALLIUM_VERSION.clone(),
                     Alignment::Right,
                     None,
                 )),

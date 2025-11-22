@@ -76,6 +76,13 @@ package-build:
 	rsync -a $(BUILD_DIR)/show-hotkeys $(DIST_DIR)/.tmp_update/bin/
 	rsync -a $(BUILD_DIR)/activity-tracker "$(DIST_DIR)/Apps/Activity Tracker.pak/"
 	rsync -a $(BUILD_DIR)/myctl $(DIST_DIR)/.tmp_update/bin/
+	@# Write version.txt: use git tag if available, otherwise nightly-<hash>
+	@TAG=$$(git describe --exact-match --tags HEAD 2>/dev/null | grep -v '^nightly$$'); \
+	if [ -n "$$TAG" ]; then \
+		echo "$$TAG" > $(DIST_DIR)/.allium/version.txt; \
+	else \
+		echo "nightly-$$(git rev-parse --short HEAD)" > $(DIST_DIR)/.allium/version.txt; \
+	fi
 
 MIGRATIONS_DIR := $(DIST_DIR)/.allium/migrations
 .PHONY: migrations
@@ -134,7 +141,6 @@ bump-version: lint
 	sed -i'' -e "s/^version = \".*\"/version = \"$(version)\"/" crates/alliumd/Cargo.toml
 	sed -i'' -e "s/^version = \".*\"/version = \"$(version)\"/" crates/activity-tracker/Cargo.toml
 	sed -i'' -e "s/^version = \".*\"/version = \"$(version)\"/" crates/common/Cargo.toml
-	echo "v$(version)" > static/.allium/version.txt
 	cargo check
 	git add crates/allium-launcher/Cargo.toml
 	git add crates/allium-menu/Cargo.toml
@@ -142,7 +148,6 @@ bump-version: lint
 	git add crates/activity-tracker/Cargo.toml
 	git add crates/common/Cargo.toml
 	git add Cargo.lock
-	git add static/.allium/version.txt
 	git commit -m "chore: bump version to v$(version)"
 	git tag "v$(version)" -a
 
