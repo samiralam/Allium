@@ -278,6 +278,12 @@ where
             self.dirty = false;
         }
 
+        #[cfg(feature = "debug-ui-redraw")]
+        {
+            use embedded_graphics::prelude::DrawTarget;
+            display.clear(StylesheetColor::Background.to_color(styles).into());
+        }
+
         let mut drawn = false;
 
         if self.search_results.is_none() {
@@ -304,6 +310,9 @@ where
                 && self.status_bar.draw(display, styles)?;
             drawn |= self.status_bar.should_draw() && self.status_bar.draw(display, styles)?;
         }
+
+        #[cfg(feature = "debug-ui")]
+        common::view::draw_debug_bounds(self, display, styles, 0)?;
 
         Ok(drawn)
     }

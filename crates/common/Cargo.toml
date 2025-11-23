@@ -13,6 +13,7 @@ path = "src/lib.rs"
 [features]
 simulator = ["embedded-graphics-simulator", "sdl2"]
 miyoo = ["evdev", "framebuffer", "sysfs_gpio"]
+debug-ui = []
 
 [dependencies]
 anyhow.workspace = true

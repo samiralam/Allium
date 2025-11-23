@@ -111,6 +111,55 @@ impl fmt::Debug for dyn View {
     }
 }
 
+/// Draw debug bounding boxes around the UI tree.
+#[cfg(feature = "debug-ui")]
+pub fn draw_debug_bounds<D>(
+    view: &mut dyn View,
+    display: &mut D,
+    styles: &Stylesheet,
+    depth: usize,
+) -> Result<()>
+where
+    D: embedded_graphics::draw_target::DrawTarget<
+            Color = crate::display::color::Color,
+            Error = anyhow::Error,
+        >,
+{
+    use crate::display::color::Color;
+    use embedded_graphics::Drawable;
+    use embedded_graphics::primitives::{Primitive, PrimitiveStyleBuilder, Rectangle};
+
+    // Generate a color based on depth for visual distinction
+    let colors = [
+        Color::new(255, 0, 0),   // Red
+        Color::new(0, 255, 0),   // Green
+        Color::new(0, 0, 255),   // Blue
+        Color::new(255, 255, 0), // Yellow
+        Color::new(255, 0, 255), // Magenta
+        Color::new(0, 255, 255), // Cyan
+    ];
+    let color = colors[depth % colors.len()];
+
+    let rect = view.bounding_box(styles);
+    if rect.w > 0 && rect.h > 0 {
+        let stroke_style = PrimitiveStyleBuilder::new()
+            .stroke_color(color)
+            .stroke_width(1)
+            .build();
+
+        Rectangle::from(rect)
+            .into_styled(stroke_style)
+            .draw(display)?;
+    }
+
+    // Recursively draw children
+    for child in view.children_mut() {
+        draw_debug_bounds(child, display, styles, depth + 1)?;
+    }
+
+    Ok(())
+}
+
 #[async_trait(?Send)]
 impl View for Box<dyn View> {
     fn update(&mut self, dt: Duration) {

@@ -7,6 +7,9 @@ TOOLCHAIN := mholdg16/miyoomini-toolchain:latest
 TARGET_TRIPLE := armv7-unknown-linux-gnueabihf
 GLIBC_VERSION := 2.28
 
+comma := ,
+FEATURES ?=
+
 -include local.mk
 
 .PHONY: all
@@ -30,7 +33,7 @@ simulator/Themes:
 
 .PHONY: simulator
 simulator: simulator-env
-	RUST_LOG=debug RUST_BACKTRACE=1 ALLIUM_DATABASE=$(ROOT_DIR)/simulator/allium.db ALLIUM_BASE_DIR=$(ROOT_DIR)/simulator/.allium ALLIUM_SD_ROOT=$(ROOT_DIR)/simulator cargo run --bin $(bin) --features=simulator $(args)
+	RUST_LOG=debug RUST_BACKTRACE=1 ALLIUM_DATABASE=$(ROOT_DIR)/simulator/allium.db ALLIUM_BASE_DIR=$(ROOT_DIR)/simulator/.allium ALLIUM_SD_ROOT=$(ROOT_DIR)/simulator cargo run --bin $(bin) --features=simulator$(if $(FEATURES),$(comma)$(FEATURES)) $(args)
 
 .PHONY: dist
 dist:
