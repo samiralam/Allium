@@ -38,36 +38,14 @@ pub struct RecentsCarousel {
 
 impl RecentsCarousel {
     pub fn new(rect: Rect, res: Resources, state: RecentsCarouselState) -> Result<Self> {
-        let Rect { x, y, w, h } = rect;
+        let Rect { x, y, w, .. } = rect;
 
         let games = Self::load_games(&res)?;
         let selected = state.selected.min(games.len().saturating_sub(1));
 
         let styles = res.get::<Stylesheet>();
-        let y_margin = 8;
-        let x_margin = 12;
-        let ui_font_size = styles.ui.ui_font.size as i32;
-        let bottom_area_height = (y_margin * 3) + (ui_font_size * 2);
-        let screenshot_height = h.saturating_sub((bottom_area_height + y_margin) as u32);
 
-        let mut screenshot = Image::empty(
-            Rect::new(x, y + y_margin, w, screenshot_height),
-            ImageMode::Contain,
-        );
-        screenshot.set_border_radius(12);
-        screenshot.set_alignment(Alignment::Center);
-
-        let game_name = Label::new(
-            Point::new(
-                x + w as i32 / 2,
-                y + y_margin + screenshot_height as i32 + y_margin,
-            ),
-            String::new(),
-            Alignment::Center,
-            Some(w - (x_margin * 2) as u32),
-        );
-
-        let button_hints = {
+        let mut button_hints = {
             let locale = res.get::<Locale>();
             ButtonHints::new(
                 res.clone(),
@@ -90,6 +68,27 @@ impl RecentsCarousel {
                 ],
             )
         };
+
+        let button_hints_rect = button_hints.bounding_box(&styles);
+        let label_height = styles.ui.margin_y * 2 + styles.ui.ui_font.size as i32;
+        // Calculate screenshot height based on where button hints start
+        let available_height = (button_hints_rect.y - y) as u32;
+        let screenshot_height = available_height.saturating_sub(label_height as u32);
+
+        let mut screenshot =
+            Image::empty(Rect::new(x, y, w, screenshot_height), ImageMode::Contain);
+        screenshot.set_border_radius(12);
+        screenshot.set_alignment(Alignment::Center);
+
+        let game_name = Label::new(
+            Point::new(
+                x + w as i32 / 2,
+                y + screenshot_height as i32 + styles.ui.margin_y,
+            ),
+            String::new(),
+            Alignment::Center,
+            Some(w - (styles.ui.margin_x * 2) as u32),
+        );
 
         drop(styles);
 
@@ -296,11 +295,15 @@ impl View for RecentsCarousel {
     }
 
     fn children(&self) -> Vec<&dyn View> {
-        vec![]
+        vec![&self.screenshot, &self.game_name, &self.button_hints]
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn View> {
-        vec![]
+        vec![
+            &mut self.screenshot,
+            &mut self.game_name,
+            &mut self.button_hints,
+        ]
     }
 
     fn bounding_box(&mut self, _styles: &Stylesheet) -> Rect {
