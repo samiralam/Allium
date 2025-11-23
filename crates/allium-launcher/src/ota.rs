@@ -231,11 +231,11 @@ pub struct DownloadProgress {
 }
 
 impl DownloadProgress {
-    pub fn percentage(&self) -> u8 {
+    pub fn percentage(&self) -> f32 {
         if self.total == 0 {
-            0
+            0.0
         } else {
-            ((self.downloaded as f64 / self.total as f64) * 100.0) as u8
+            self.downloaded as f32 / self.total as f32 * 100.0
         }
     }
 }

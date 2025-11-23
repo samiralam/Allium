@@ -24,7 +24,7 @@ enum UpdateStatus {
     Idle,
     Checking,
     Available(GitHubRelease), // Store the available release
-    Downloading(u8),          // Store download progress percentage
+    Downloading(f32),         // Store download progress percentage
     Ready,
     UpToDate,
     Error(String),
@@ -37,7 +37,7 @@ impl UpdateStatus {
             UpdateStatus::Checking => locale.t("settings-system-update-checking"),
             UpdateStatus::Available(_) => locale.t("settings-system-update-available"),
             UpdateStatus::Downloading(progress) => format!(
-                "{} ({}%)",
+                "{} ({:.1}%)",
                 locale.t("settings-system-update-downloading"),
                 progress
             ),
@@ -322,7 +322,6 @@ impl SystemUpdate {
             match event {
                 ota::DownloadEvent::Progress(progress) => {
                     let percentage = progress.percentage();
-                    // Update status with new progress
                     if let UpdateStatus::Downloading(_) = self.update_status {
                         self.update_status = UpdateStatus::Downloading(percentage);
                         self.update_status_label();
@@ -406,7 +405,7 @@ impl SystemUpdate {
                 self.download_rx = Some(event_rx);
 
                 // Start with 0% progress
-                self.update_status = UpdateStatus::Downloading(0);
+                self.update_status = UpdateStatus::Downloading(0.0);
                 self.update_status_label();
 
                 // Spawn download task
