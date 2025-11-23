@@ -349,12 +349,13 @@ impl Stylesheet {
         #[cfg(feature = "simulator")]
         {
             // Write default missing fields to original stylesheet.json
-            let file = File::create(
-                PathBuf::from("/home/weiwen/dev/github/goweiwen/Allium-Themes/Themes")
+            if let Ok(file) = File::create(
+                PathBuf::from("../Allium-Themes/Themes")
                     .join(&theme.0)
                     .join("stylesheet.json"),
-            )?;
-            serde_json::to_writer_pretty(&file, &styles)?;
+            ) {
+                serde_json::to_writer_pretty(&file, &styles)?;
+            }
         }
 
         // Load override file if it exists

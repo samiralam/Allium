@@ -129,13 +129,12 @@ where
 
         let mut drawn = false;
 
-        if self.should_draw() {
-            display.load(self.bounding_box(styles))?;
-            for entry in &mut self.children.iter_mut() {
-                entry.draw(display, styles)?;
-            }
-            drawn = true;
+        display.load(self.bounding_box(styles))?;
+        for entry in &mut self.children.iter_mut() {
+            entry.draw(display, styles)?;
         }
+        drawn = true;
+
         Ok(drawn)
     }
 
