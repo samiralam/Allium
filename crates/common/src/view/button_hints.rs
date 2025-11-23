@@ -178,21 +178,8 @@ where
 
         // Extend the bounding box to cover the entire width
         if bbox.w > 0 && bbox.h > 0 {
-            let left_x = if let Some(ref mut left) = self.left_row {
-                left.bounding_box(styles).x
-            } else {
-                bbox.x
-            };
-
-            let right_bbox = if let Some(ref mut right) = self.right_row {
-                right.bounding_box(styles)
-            } else {
-                bbox
-            };
-            let right_edge = right_bbox.x + right_bbox.w as i32;
-
-            let full_width = (right_edge - left_x) as u32;
-            bbox = Rect::new(left_x, bbox.y, full_width, bbox.h);
+            let size = self.res.get::<Size>();
+            bbox = Rect::new(0, bbox.y, size.w, bbox.h);
         }
 
         bbox

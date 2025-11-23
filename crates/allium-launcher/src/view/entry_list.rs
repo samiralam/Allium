@@ -195,6 +195,7 @@ where
                 .get_mut(1)
                 .unwrap()
                 .set_text(self.sort.button_hint(&self.res.get::<Locale>()));
+            self.button_hints.set_should_draw();
         }
         Ok(())
     }
@@ -352,18 +353,9 @@ where
         }
 
         if self.button_hints.should_draw() {
-            display.load(Rect::new(
-                0,
-                display.size().height as i32 - 48,
-                display.size().width,
-                48,
-            ))?;
-            self.button_hints.set_should_draw();
-            if self.button_hints.draw(display, styles)? {
-                drawn = true;
-            }
+            display.load(self.button_hints.bounding_box(styles))?;
+            drawn |= self.button_hints.draw(display, styles)?;
         }
-
         Ok(drawn)
     }
 

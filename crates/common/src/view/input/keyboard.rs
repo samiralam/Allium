@@ -226,13 +226,7 @@ impl View for Keyboard {
         }
 
         if self.button_hints.should_draw() {
-            display.load(Rect::new(
-                display.bounding_box().top_left.x,
-                display.bounding_box().top_left.y + display.bounding_box().size.height as i32 - 48,
-                display.bounding_box().size.width,
-                48,
-            ))?;
-
+            display.load(self.button_hints.bounding_box(styles))?;
             drawn |= self.button_hints.draw(display, styles)?;
         }
 
