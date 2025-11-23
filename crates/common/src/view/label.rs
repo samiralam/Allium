@@ -304,9 +304,7 @@ where
         .bounding_box()
         .into();
 
-        if self.scrolling.is_some()
-            && let Some(width) = self.width
-        {
+        if let Some(width) = self.width {
             rect.w = rect.w.min(width);
         }
 

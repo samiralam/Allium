@@ -125,12 +125,14 @@ impl View for Toggle {
         Vec::new()
     }
 
-    fn bounding_box(&mut self, _styles: &Stylesheet) -> Rect {
+    fn bounding_box(&mut self, styles: &Stylesheet) -> Rect {
+        let h = styles.ui.ui_font.size;
+        let w = h * 3 / 2;
         Rect::new(
-            self.point.x - (44 * (1 - self.alignment.sign())),
+            self.point.x - (w as i32 * (1 - self.alignment.sign()) / 2),
             self.point.y,
-            44,
-            24,
+            w,
+            h,
         )
     }
 
