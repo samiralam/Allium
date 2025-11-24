@@ -430,6 +430,11 @@ where
             drawn |= self.button_hints.should_draw() && self.button_hints.draw(display, styles)?;
         }
 
+        #[cfg(feature = "debug-ui")]
+        if drawn {
+            common::view::draw_debug_bounds(self, display, styles, 0)?;
+        }
+
         Ok(drawn)
     }
 
