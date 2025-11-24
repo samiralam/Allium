@@ -71,10 +71,11 @@ impl LazyImage {
                     }
                 }
             }
-            if parent.as_path() == ALLIUM_SD_ROOT.as_path() {
+            if parent.as_path() == ALLIUM_SD_ROOT.as_path()
+                && let Ok(rel_path) = path.strip_prefix(ALLIUM_SD_ROOT.join("Roms"))
+            {
                 let mut image_path = parent.join("Imgs");
-                parent.push("Roms");
-                image_path.extend(path.strip_prefix(&parent).unwrap());
+                image_path.extend(rel_path);
                 debug!("Searching for image at {:?}", image_path);
                 for ext in &IMAGE_EXTENSIONS {
                     image_path.set_extension(ext);
