@@ -10,7 +10,6 @@ use base32::encode;
 use common::battery::Battery;
 use common::command::Command;
 use common::constants::{ALLIUM_MENU_STATE, ALLIUM_SCREENSHOTS_DIR, SAVE_STATE_IMAGE_WIDTH};
-use common::display::Display;
 use common::game_info::GameInfo;
 use common::geom::{Alignment, Point, Rect};
 use common::locale::Locale;
@@ -19,8 +18,7 @@ use common::resources::Resources;
 use common::retroarch::RetroArchCommand;
 use common::stylesheet::Stylesheet;
 use common::view::{
-    ButtonHint, ButtonHints, Image, ImageMode, Label, NullView, ScrollList, SettingsList,
-    StatusBar, View,
+    ButtonHint, ButtonHints, Image, ImageMode, Label, NullView, SettingsList, StatusBar, View,
 };
 use log::warn;
 use serde::{Deserialize, Serialize};
@@ -28,17 +26,13 @@ use sha2::{Digest, Sha256};
 use tokio::sync::mpsc::Sender;
 
 use crate::retroarch_info::RetroArchInfo;
-use crate::view::text_reader::TextReader;
+use crate::view::guide_selector::GuideSelector;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct IngameMenuState {
+    is_guide_open: bool,
     is_text_reader_open: bool,
     selected_guide_path: Option<PathBuf>,
-}
-
-enum ChildView {
-    TextReader(Box<TextReader>),
-    GuideSelector(ScrollList),
 }
 
 pub struct IngameMenu<B>
@@ -50,13 +44,12 @@ where
     name: Label<String>,
     status_bar: StatusBar<B>,
     menu: SettingsList,
-    child: Option<ChildView>,
+    guide_selector: Option<GuideSelector>,
     button_hints: ButtonHints<String>,
     entries: Vec<MenuEntry>,
     retroarch_info: Option<RetroArchInfo>,
     path: PathBuf,
     image: Image,
-    dirty: bool,
     _phantom_battery: PhantomData<B>,
 }
 
@@ -84,7 +77,7 @@ where
             None,
         );
 
-        let status_bar = StatusBar::new(
+        let mut status_bar = StatusBar::new(
             res.clone(),
             Point::new(w as i32 - styles.ui.margin_y, y + styles.ui.margin_y),
             battery,
@@ -117,9 +110,10 @@ where
             ],
         );
 
+        let status_bar_rect = status_bar.bounding_box(&styles);
         let button_hints_rect = button_hints.bounding_box(&styles);
         let content_top =
-            y + styles.ui.margin_y + styles.ui.margin_y / 2 + styles.ui.ui_font.size as i32;
+            y + styles.ui.margin_y + styles.ui.ui_font.size.max(status_bar_rect.h) as i32;
         let content_height = (button_hints_rect.y - content_top) as u32;
 
         let entries = MenuEntry::entries(retroarch_info.as_ref(), !game_info.guides.is_empty());
@@ -167,8 +161,8 @@ where
         image.set_border_radius(12);
         image.set_alignment(Alignment::Right);
 
-        let mut child = None;
-        if state.is_text_reader_open {
+        let mut guide_selector = None;
+        if state.is_guide_open || state.is_text_reader_open {
             menu.select(
                 entries
                     .iter()
@@ -188,36 +182,19 @@ where
             };
 
             if let Some(selected) = selected {
-                // If only one guide, open it directly
-                child = Some(ChildView::TextReader(Box::new(TextReader::new(
-                    rect,
-                    res.clone(),
-                    game_info.guides[selected].clone(),
-                ))));
-            } else if !game_info.guides.is_empty() {
-                // If multiple guides, show selector
-                let guide_names: Vec<String> = game_info
-                    .guides
-                    .iter()
-                    .filter_map(|p| {
-                        p.file_name()
-                            .and_then(|n| n.to_str())
-                            .map(|s| s.to_string())
-                    })
-                    .collect();
-                let selector = ScrollList::new(
-                    res.clone(),
-                    Rect::new(
-                        x + styles.ui.margin_x,
-                        content_top,
-                        w - styles.ui.margin_x as u32 * 2,
-                        (button_hints_rect.y - content_top - styles.ui.margin_y * 2) as u32,
-                    ),
-                    guide_names.clone(),
-                    Alignment::Left,
-                    styles.ui.ui_font.size + styles.ui.padding_y as u32,
+                let selector_rect = Rect::new(
+                    x,
+                    content_top,
+                    rect.w,
+                    (button_hints_rect.y - content_top) as u32,
                 );
-                child = Some(ChildView::GuideSelector(selector));
+                guide_selector = Some(GuideSelector::new(
+                    selector_rect,
+                    res.clone(),
+                    game_info.guides.clone(),
+                    selected,
+                    state.is_text_reader_open,
+                ));
             }
         }
 
@@ -233,13 +210,12 @@ where
             name,
             status_bar,
             menu,
-            child,
+            guide_selector,
             button_hints,
             entries,
             retroarch_info,
             path,
             image,
-            dirty: false,
             _phantom_battery: PhantomData,
         }
     }
@@ -264,18 +240,20 @@ where
 
     pub fn save(&self) -> Result<()> {
         let file = File::create(ALLIUM_MENU_STATE.as_path())?;
-        let selected_guide_path = match self.child.as_ref() {
-            Some(ChildView::GuideSelector(selector)) => {
-                let guides = &self.res.get::<GameInfo>().guides;
-                guides.get(selector.selected()).cloned()
-            }
-            _ => None,
-        };
         let state = IngameMenuState {
-            is_text_reader_open: self.child.is_some(),
-            selected_guide_path,
+            is_guide_open: self.guide_selector.is_some(),
+            is_text_reader_open: self
+                .guide_selector
+                .as_ref()
+                .is_some_and(|s| s.is_text_reader_open()),
+            selected_guide_path: self
+                .guide_selector
+                .as_ref()
+                .and_then(|s| s.selected_path().map(|p| p.to_path_buf())),
         };
-        if let Some(ChildView::TextReader(reader)) = self.child.as_ref() {
+        if let Some(selector) = &self.guide_selector
+            && let Some(reader) = selector.text_reader()
+        {
             reader.save_cursor();
         }
         serde_json::to_writer(file, &state)?;
@@ -315,41 +293,30 @@ where
                 commands.send(Command::Exit).await?;
             }
             MenuEntry::Guide => {
-                let guides = &self.res.get::<GameInfo>().guides;
-                if guides.len() == 1 {
-                    // If only one guide, open it directly
-                    self.child = Some(ChildView::TextReader(Box::new(TextReader::new(
-                        self.rect,
-                        self.res.clone(),
-                        guides[0].clone(),
-                    ))));
-                } else if !guides.is_empty() {
-                    // If multiple guides, show selector
+                let game_info = self.res.get::<GameInfo>();
+                let guides = game_info.guides.clone();
+                drop(game_info);
+
+                if !guides.is_empty() {
                     let styles = self.res.get::<Stylesheet>();
-                    let guide_names: Vec<String> = guides
-                        .iter()
-                        .filter_map(|p| {
-                            p.file_name()
-                                .and_then(|n| n.to_str())
-                                .map(|s| s.to_string())
-                        })
-                        .collect();
+                    let status_bar_rect = self.status_bar.bounding_box(&styles);
                     let button_hints_rect = self.button_hints.bounding_box(&styles);
-                    let content_top =
-                        self.rect.y + styles.ui.margin_y + styles.ui.ui_font.size as i32 + 8;
-                    let selector = ScrollList::new(
-                        self.res.clone(),
-                        Rect::new(
-                            self.rect.x + styles.ui.margin_x,
-                            content_top,
-                            self.rect.w - styles.ui.margin_x as u32 * 2,
-                            (button_hints_rect.y - content_top - styles.ui.margin_y * 2) as u32,
-                        ),
-                        guide_names,
-                        Alignment::Left,
-                        styles.ui.ui_font.size + styles.ui.padding_y as u32,
+                    let content_top = self.rect.y
+                        + styles.ui.margin_y
+                        + styles.ui.ui_font.size.max(status_bar_rect.h) as i32;
+                    let selector_rect = Rect::new(
+                        self.rect.x,
+                        content_top,
+                        self.rect.w,
+                        (button_hints_rect.y - content_top) as u32,
                     );
-                    self.child = Some(ChildView::GuideSelector(selector));
+                    self.guide_selector = Some(GuideSelector::new(
+                        selector_rect,
+                        self.res.clone(),
+                        guides,
+                        0,
+                        false,
+                    ));
                 }
             }
             MenuEntry::Settings => {
@@ -453,71 +420,40 @@ where
     ) -> Result<bool> {
         let mut drawn = false;
 
-        if self.dirty {
-            display.load(self.rect)?;
-            self.dirty = false;
-        }
-
-        match self.child.as_mut() {
-            Some(ChildView::TextReader(reader)) => {
-                drawn |= reader.should_draw() && reader.draw(display, styles)?;
-            }
-            Some(ChildView::GuideSelector(selector)) => {
-                drawn |= self.name.should_draw() && self.name.draw(display, styles)?;
-                drawn |= self.status_bar.should_draw() && self.status_bar.draw(display, styles)?;
-                drawn |= selector.should_draw() && selector.draw(display, styles)?;
-                drawn |=
-                    self.button_hints.should_draw() && self.button_hints.draw(display, styles)?;
-            }
-            None => {
-                drawn |= self.name.should_draw() && self.name.draw(display, styles)?;
-                drawn |= self.status_bar.should_draw() && self.status_bar.draw(display, styles)?;
-                drawn |= self.menu.should_draw() && self.menu.draw(display, styles)?;
-                drawn |= self.image.should_draw() && self.image.draw(display, styles)?;
-                drawn |=
-                    self.button_hints.should_draw() && self.button_hints.draw(display, styles)?;
-            }
+        drawn |= self.name.should_draw() && self.name.draw(display, styles)?;
+        drawn |= self.status_bar.should_draw() && self.status_bar.draw(display, styles)?;
+        if let Some(selector) = &mut self.guide_selector {
+            drawn |= selector.should_draw() && selector.draw(display, styles)?;
+        } else {
+            drawn |= self.menu.should_draw() && self.menu.draw(display, styles)?;
+            drawn |= self.image.should_draw() && self.image.draw(display, styles)?;
+            drawn |= self.button_hints.should_draw() && self.button_hints.draw(display, styles)?;
         }
 
         Ok(drawn)
     }
 
     fn should_draw(&self) -> bool {
-        match self.child.as_ref() {
-            Some(ChildView::TextReader(reader)) => self.dirty || reader.should_draw(),
-            Some(ChildView::GuideSelector(selector)) => {
-                self.dirty
-                    || self.name.should_draw()
-                    || self.status_bar.should_draw()
-                    || selector.should_draw()
+        self.name.should_draw()
+            || self.status_bar.should_draw()
+            || if let Some(selector) = &self.guide_selector {
+                selector.should_draw()
+            } else {
+                self.menu.should_draw()
+                    || self.image.should_draw()
                     || self.button_hints.should_draw()
             }
-            None => {
-                self.dirty
-                    || self.name.should_draw()
-                    || self.status_bar.should_draw()
-                    || self.menu.should_draw()
-                    || self.button_hints.should_draw()
-            }
-        }
     }
 
     fn set_should_draw(&mut self) {
-        self.dirty = true;
-        match self.child.as_mut() {
-            Some(ChildView::TextReader(reader)) => reader.set_should_draw(),
-            Some(ChildView::GuideSelector(selector)) => {
-                self.name.set_should_draw();
-                self.status_bar.set_should_draw();
-                selector.set_should_draw();
-                self.button_hints.set_should_draw();
-            }
-            None => {
-                self.name.set_should_draw();
-                self.status_bar.set_should_draw();
-                self.menu.set_should_draw();
-                self.button_hints.set_should_draw();
-            }
+        self.name.set_should_draw();
+        self.status_bar.set_should_draw();
+        if let Some(selector) = &mut self.guide_selector {
+            selector.set_should_draw();
+        } else {
+            self.menu.set_should_draw();
+            self.image.set_should_draw();
+            self.button_hints.set_should_draw();
         }
     }
 
@@ -532,52 +468,21 @@ where
             return Ok(true);
         }
 
-        match self.child.as_mut() {
-            Some(ChildView::TextReader(reader)) => {
-                if reader
-                    .handle_key_event(event, commands.clone(), bubble)
-                    .await?
-                {
-                    bubble.retain(|cmd| match cmd {
-                        Command::CloseView => {
-                            self.child = None;
-                            self.set_should_draw();
-                            false
-                        }
-                        _ => true,
-                    });
-                    return Ok(true);
-                }
-            }
-            Some(ChildView::GuideSelector(selector)) => {
-                if selector
-                    .handle_key_event(event, commands.clone(), bubble)
-                    .await?
-                {
-                    return Ok(true);
-                }
-                // Handle selection of a guide
-                if matches!(event, KeyEvent::Pressed(Key::A)) {
-                    let selected_idx = selector.selected();
-                    let guides = self.res.get::<GameInfo>().guides.clone();
-                    if let Some(guide) = guides.get(selected_idx) {
-                        self.child = Some(ChildView::TextReader(Box::new(TextReader::new(
-                            self.rect,
-                            self.res.clone(),
-                            guide.clone(),
-                        ))));
+        if let Some(selector) = &mut self.guide_selector {
+            if selector
+                .handle_key_event(event, commands.clone(), bubble)
+                .await?
+            {
+                bubble.retain(|cmd| match cmd {
+                    Command::CloseView => {
+                        self.guide_selector = None;
                         self.set_should_draw();
-                        return Ok(true);
+                        false
                     }
-                }
-                // Handle back button to close selector
-                if matches!(event, KeyEvent::Pressed(Key::B)) {
-                    self.child = None;
-                    self.set_should_draw();
-                    return Ok(true);
-                }
+                    _ => true,
+                });
+                return Ok(true);
             }
-            None => {}
         }
 
         let selected = self.menu.selected();
@@ -705,16 +610,26 @@ where
     }
 
     fn children(&self) -> Vec<&dyn View> {
-        vec![&self.name, &self.status_bar, &self.menu, &self.button_hints]
+        let mut children: Vec<&dyn View> = vec![&self.name, &self.status_bar, &self.button_hints];
+        if let Some(selector) = &self.guide_selector {
+            children.push(selector);
+        } else {
+            children.push(&self.menu);
+            children.push(&self.image);
+        }
+        children
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn View> {
-        vec![
-            &mut self.name,
-            &mut self.status_bar,
-            &mut self.menu,
-            &mut self.button_hints,
-        ]
+        let mut children: Vec<&mut dyn View> =
+            vec![&mut self.name, &mut self.status_bar, &mut self.button_hints];
+        if let Some(selector) = &mut self.guide_selector {
+            children.push(selector);
+        } else {
+            children.push(&mut self.menu);
+            children.push(&mut self.image);
+        }
+        children
     }
 
     fn bounding_box(&mut self, _styles: &Stylesheet) -> Rect {

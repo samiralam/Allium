@@ -313,18 +313,18 @@ impl TextReader {
         if lines < 0 {
             self.move_forward_lines(-lines as usize);
         }
-        self.dirty = true;
+        self.set_should_draw();
     }
 
     fn move_forward_lines(&mut self, lines: usize) {
-        let styles = &self.res.get::<Stylesheet>();
+        let styles = self.res.get::<Stylesheet>();
         for _ in 0..lines {
             if self.cursor > self.text.len() {
                 self.cursor = self.text.rfind('\n').map(|i| i + 1).unwrap_or_default();
                 break;
             }
             if self.cursor != self.text.len() {
-                let text = self.get_line(styles, self.cursor);
+                let text = self.get_line(&styles, self.cursor);
                 self.cursor += text.len();
                 if self.text.is_char_boundary(self.cursor)
                     && self.text[self.cursor..]
@@ -337,7 +337,9 @@ impl TextReader {
                 }
             }
         }
-        self.dirty = true;
+        drop(styles);
+
+        self.set_should_draw();
     }
 }
 
@@ -359,10 +361,16 @@ impl View for TextReader {
 
         if self.dirty {
             let button_hints_rect = self.button_hints.bounding_box(styles);
-            let content_top = self.rect.y + 12;
-            let content_height = (button_hints_rect.y - content_top - styles.ui.margin_x) as u32;
+            let content_top = self.rect.y;
+            let content_height = (button_hints_rect.y - content_top) as u32;
 
-            display.load(display.bounding_box().into())?;
+            display.load(Rect::new(
+                self.rect.x,
+                content_top,
+                self.rect.w,
+                content_height,
+            ))?;
+
             RoundedRectangle::with_equal_corners(
                 <Rect as Into<Rectangle>>::into(Rect::new(
                     self.rect.x + styles.ui.margin_x,
@@ -383,7 +391,7 @@ impl View for TextReader {
                 .build();
 
             let visible_lines: Vec<&str> = self.visible_text(styles, content_height);
-            let mut y = content_top + 8;
+            let mut y = content_top;
             for line in visible_lines {
                 let text = Text::new(
                     line,
@@ -403,7 +411,7 @@ impl View for TextReader {
                     self.rect.x + self.rect.w as i32 - 16,
                     content_top + content_height as i32
                         - styles.menu.guide_font.size as i32
-                        - styles.ui.margin_x,
+                        - styles.ui.margin_y / 2,
                 )
                 .into(),
                 text_style,
@@ -509,11 +517,19 @@ impl View for TextReader {
     }
 
     fn children(&self) -> Vec<&dyn View> {
-        vec![]
+        let mut children: Vec<&dyn View> = vec![&self.button_hints];
+        if let Some(ref keyboard) = self.keyboard {
+            children.push(keyboard);
+        }
+        children
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn View> {
-        vec![]
+        let mut children: Vec<&mut dyn View> = vec![&mut self.button_hints];
+        if let Some(ref mut keyboard) = self.keyboard {
+            children.push(keyboard);
+        }
+        children
     }
 
     fn set_position(&mut self, _point: Point) {

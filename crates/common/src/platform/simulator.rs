@@ -98,6 +98,10 @@ impl Platform for SimulatorPlatform {
     fn display(&mut self) -> Result<SimulatorWindow> {
         let bg_path = format!("simulator/bg-{}x{}.png", *SCREEN_WIDTH, *SCREEN_HEIGHT);
         let display = SimulatorDisplay::load_png(&bg_path).unwrap_or_else(|_| {
+            warn!(
+                "Failed to load background image '{}', using black background",
+                bg_path
+            );
             SimulatorDisplay::with_default_color(
                 Size::new(*SCREEN_WIDTH, *SCREEN_HEIGHT),
                 Color::new(0, 0, 0),
