@@ -30,8 +30,20 @@ pub struct App {
 
 impl App {
     pub fn new(directory: PathBuf) -> Result<Self> {
-        let config = File::open(directory.join("config.json"))?;
-        let config: AppConfig = serde_json::from_reader(config)?;
+        let config = if let Ok(file) = File::open(directory.join("config.json")) {
+            serde_json::from_reader(file)?
+        } else {
+            AppConfig {
+                label: directory
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("Unknown App")
+                    .to_string(),
+                icon: None,
+                launch: "launch.sh".to_owned(),
+                description: String::new(),
+            }
+        };
 
         let name = config.label;
         let image = config.icon;

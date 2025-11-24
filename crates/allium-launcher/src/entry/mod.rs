@@ -78,7 +78,9 @@ impl Entry {
             }
 
             // Apps are directories with .pak extension and have a config.json file inside
-            if extension == "pak" && path.join("config.json").exists() {
+            if extension == "pak"
+                && (path.join("config.json").exists() || path.join("launch.sh").exists())
+            {
                 return Ok(Some(Entry::App(App::new(path)?)));
             }
         }
