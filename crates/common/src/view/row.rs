@@ -92,7 +92,9 @@ where
         for entry in &mut self.children {
             let rect = entry.bounding_box(styles);
             entry.set_position(Point::new(x, self.point.y));
-            x += rect.w as i32 + self.margin;
+            if rect.w > 0 {
+                x += rect.w as i32 + self.margin;
+            }
         }
     }
 
@@ -101,7 +103,9 @@ where
         for entry in self.children.iter_mut() {
             entry.set_position(Point::new(x, self.point.y));
             let rect = entry.bounding_box(styles);
-            x -= rect.w as i32 + self.margin;
+            if rect.w > 0 {
+                x -= rect.w as i32 + self.margin;
+            }
         }
     }
 }
