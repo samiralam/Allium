@@ -220,6 +220,7 @@ impl View for Settings {
     }
 
     fn set_should_draw(&mut self) {
+        self.dirty = true;
         if let Some(ref mut child) = self.child {
             child.set_should_draw();
         } else {
