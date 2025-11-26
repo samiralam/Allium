@@ -219,16 +219,18 @@ fn parse_firmware(data: &str) -> &str {
     ""
 }
 
-pub fn try_fix_resolution() -> Result<()> {
+pub async fn try_fix_resolution() -> Result<()> {
     if let Some((width, height)) = try_detect_resolution() {
-        Command::new("fbset")
+        tokio::process::Command::new("fbset")
             .arg("-g")
             .arg(width.to_string())
             .arg(height.to_string())
             .arg(width.to_string())
             .arg((height * 3).to_string())
             .arg("32") // bpp
-            .spawn()?;
+            .spawn()?
+            .wait()
+            .await?;
     }
     Ok(())
 }
