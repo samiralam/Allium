@@ -25,9 +25,7 @@ pub struct WifiIndicator {
 
 impl WifiIndicator {
     pub fn new(res: Resources, point: Point) -> Self {
-        let enabled = wifi::WiFiSettings::load()
-            .map(|s| s.wifi)
-            .unwrap_or(false);
+        let enabled = wifi::WiFiSettings::load().map(|s| s.wifi).unwrap_or(false);
         let connected = enabled && wifi::ip_address().is_some();
         let mut icon = WifiIcon::new(point);
         icon.set_connected(connected);
@@ -52,9 +50,7 @@ impl View for WifiIndicator {
         }
         self.last_updated = Instant::now();
 
-        let enabled = wifi::WiFiSettings::load()
-            .map(|s| s.wifi)
-            .unwrap_or(false);
+        let enabled = wifi::WiFiSettings::load().map(|s| s.wifi).unwrap_or(false);
         let connected = enabled && wifi::ip_address().is_some();
 
         if enabled != self.enabled || connected != self.connected {
