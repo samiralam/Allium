@@ -2,6 +2,7 @@
 name = "screenshot-viewer"
 version = "0.29.0"
 edition = "2024"
+license = "MIT"
 
 [[bin]]
 name = "screenshot-viewer"
