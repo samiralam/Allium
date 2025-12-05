@@ -78,7 +78,10 @@ impl Game {
         }
     }
 
-    pub fn from_db(game: DbGame) -> Game {
+    pub fn from_db(game: DbGame) -> Option<Game> {
+        if !game.path.exists() {
+            return None;
+        }
         let full_name = game
             .path
             .file_stem()
@@ -96,7 +99,7 @@ impl Game {
             .unwrap_or("")
             .to_string();
 
-        Game {
+        Some(Game {
             name: game.name,
             full_name,
             path: game.path,
@@ -110,7 +113,7 @@ impl Game {
             genres: game.genres,
             favorite: game.favorite,
             screenshot_path: game.screenshot_path,
-        }
+        })
     }
 
     pub fn image(&mut self) -> Option<&Path> {

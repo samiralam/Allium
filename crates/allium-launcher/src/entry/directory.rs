@@ -324,7 +324,7 @@ impl Directory {
             database
                 .select_games_in_directory(&self.path)?
                 .into_iter()
-                .map(Game::from_db)
+                .filter_map(Game::from_db)
                 .map(Entry::Game),
         );
 
