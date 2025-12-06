@@ -220,6 +220,8 @@ impl AlliumD<DefaultPlatform> {
         // Spawn the persistent menu thread at startup
         let menu = MenuHandle::new();
 
+        platform.daemon();
+
         Ok(AlliumD {
             platform,
             main,

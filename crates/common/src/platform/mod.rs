@@ -63,6 +63,8 @@ pub trait Platform {
     fn has_wifi() -> bool;
 
     fn has_lid() -> bool;
+
+    fn daemon(&self) {}
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -2,6 +2,7 @@ mod battery;
 mod evdev;
 mod framebuffer;
 mod screen;
+pub mod usb_audio;
 mod volume;
 
 use std::fmt;
@@ -184,6 +185,17 @@ impl Platform for MiyooPlatform {
         match detect_model() {
             MiyooDeviceModel::Miyoo283 | MiyooDeviceModel::Miyoo354 => false,
             MiyooDeviceModel::Miyoo285 => true,
+        }
+    }
+
+    fn daemon(&self) {
+        log::info!("Starting Miyoo platform daemon for model {}", self.model);
+        if self.model == MiyooDeviceModel::Miyoo285 {
+            tokio::spawn(async {
+                if let Err(e) = usb_audio::usb_audio_task().await {
+                    log::error!("USB audio task failed: {}", e);
+                }
+            });
         }
     }
 }
