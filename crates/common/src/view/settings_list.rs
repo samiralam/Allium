@@ -337,7 +337,7 @@ impl View for SettingsList {
                         if let Some(child) = self.left.get_mut(self.selected - self.top) {
                             child.focus();
                         }
-                        if let Some(child) = self.right.get_mut(self.selected - self.top) {
+                        if let Some(child) = self.right.get_mut(self.selected) {
                             child.blur();
                         }
                         self.dirty = true;
@@ -387,7 +387,7 @@ impl View for SettingsList {
                             Command::TrapFocus => {
                                 self.focused = true;
                                 selected.focus();
-                                if let Some(child) = self.left.get_mut(self.selected) {
+                                if let Some(child) = self.left.get_mut(self.selected - self.top) {
                                     child.blur();
                                 }
                                 self.dirty = true;
