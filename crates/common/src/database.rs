@@ -203,15 +203,56 @@ CREATE INDEX IF NOT EXISTS idx_game_sessions_start_time ON game_sessions(start_t
     }
 
     pub fn update_game_path(&self, old: &Path, new: &Path) -> Result<()> {
-        let mut stmt = self
-            .conn
-            .as_ref()
-            .unwrap()
-            .prepare("UPDATE games SET path = ? WHERE path = ?")?;
-        stmt.execute(params![
-            new.display().to_string(),
-            old.display().to_string()
-        ])?;
+        let conn = self.conn.as_ref().unwrap();
+
+        let result = conn.execute(
+            "UPDATE games SET path = ? WHERE path = ?",
+            params![new.display().to_string(), old.display().to_string()],
+        );
+
+        // Handle UNIQUE constraint violation by merging rows
+        if let Err(rusqlite::Error::SqliteFailure(err, _)) = result
+            && err.code == rusqlite::ErrorCode::ConstraintViolation
+        {
+            let tx = conn.unchecked_transaction()?;
+
+            let (conflicting_play_count, conflicting_play_time, conflicting_favorite): (i64, i64, i64) = tx.query_row(
+                "SELECT play_count, play_time, favorite FROM games WHERE path = ?",
+                [new.display().to_string()],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )?;
+
+            tx.execute(
+                    "UPDATE games SET play_count = play_count + ?, play_time = play_time + ?, favorite = MAX(favorite, ?) WHERE path = ?",
+                    params![
+                        conflicting_play_count,
+                        conflicting_play_time,
+                        conflicting_favorite,
+                        old.display().to_string()
+                    ],
+                )?;
+
+            // Update game_sessions to point to old path before deleting conflicting row
+            tx.execute(
+                "UPDATE game_sessions SET game_path = ? WHERE game_path = ?",
+                params![old.display().to_string(), new.display().to_string()],
+            )?;
+
+            tx.execute(
+                "DELETE FROM games WHERE path = ?",
+                [new.display().to_string()],
+            )?;
+
+            tx.execute(
+                "UPDATE games SET path = ? WHERE path = ?",
+                params![new.display().to_string(), old.display().to_string()],
+            )?;
+
+            tx.commit()?;
+            return Ok(());
+        }
+
+        result?;
         Ok(())
     }
 
