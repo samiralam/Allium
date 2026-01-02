@@ -121,10 +121,12 @@ impl ConsoleMapper {
     /// Returns a console that matches the directory name exactly, or none.
     pub fn get_console_by_dir(&self, path: &Path) -> Option<&Console> {
         if let Some(name) = path.file_name().and_then(std::ffi::OsStr::to_str) {
-            let console = self
-                .consoles
-                .iter()
-                .find(|core| core.patterns.iter().any(|s| name == s));
+            let name = name.to_lowercase();
+            let console = self.consoles.iter().find(|core| {
+                core.patterns
+                    .iter()
+                    .any(|s| name == s.to_lowercase())
+            });
             if console.is_some() {
                 return console;
             }
@@ -138,10 +140,12 @@ impl ConsoleMapper {
         let path_lowercase = path.as_os_str().to_ascii_lowercase();
 
         if let Some(name) = path.file_name().and_then(std::ffi::OsStr::to_str) {
-            let console = self
-                .consoles
-                .iter()
-                .find(|core| core.file_name.iter().any(|s| name == s));
+            let name = name.to_lowercase();
+            let console = self.consoles.iter().find(|core| {
+                core.file_name
+                    .iter()
+                    .any(|s| name == s.to_lowercase())
+            });
             if console.is_some() {
                 return console;
             }
@@ -163,9 +167,12 @@ impl ConsoleMapper {
         while let Some(path) = parent {
             trace!("path: {:?}", path);
             if let Some(filename) = path.file_name().and_then(std::ffi::OsStr::to_str) {
+                let filename = filename.to_lowercase();
                 let console = self.consoles.iter().find(|core| {
                     core.patterns.iter().any(|pattern| {
-                        filename == pattern || filename.contains(&format!("({})", pattern))
+                        let pattern = pattern.to_lowercase();
+                        filename == pattern
+                            || filename.contains(&format!("({})", pattern))
                     })
                 });
                 if console.is_some() {
@@ -287,6 +294,15 @@ mod tests {
         assert!(mapper.get_console(Path::new("Roms/rom.zip.gbc")).is_some());
         assert!(mapper.get_console(Path::new("Roms/gbc")).is_none());
         assert!(mapper.get_console(Path::new("Roms/rom.gba")).is_none());
+
+        // Test case-insensitive pattern matching
+        assert!(mapper.get_console(Path::new("Roms/poke/rom.zip")).is_some());
+        assert!(mapper.get_console(Path::new("Roms/pkm/rom.zip")).is_some());
+        assert!(
+            mapper
+                .get_console(Path::new("Roms/Pokemon Mini (poke)/rom.zip"))
+                .is_some()
+        );
     }
 
     #[test]
@@ -331,6 +347,7 @@ mod tests {
 
         // GBA
         assert!(eq("GBA/rom.zip", "Game Boy Advance", "gpsp"));
+        assert!(eq("gba/rom.zip", "Game Boy Advance", "gpsp"));
         assert!(eq("rom.gba", "Game Boy Advance", "gpsp"));
 
         // NES
