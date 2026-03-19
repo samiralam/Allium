@@ -11,13 +11,14 @@ use common::geom::{Alignment, Point, Rect};
 use common::locale::Locale;
 use common::platform::{DefaultPlatform, Key, KeyEvent, Platform};
 use common::resources::Resources;
-use common::stylesheet::Stylesheet;
-use common::view::{ButtonHint, ButtonHints, Image, ImageMode, Label, View};
+use common::stylesheet::{Stylesheet, StylesheetColor};
+use common::view::{ButtonHint, ButtonHints, Image, ImageMode, Label, ScrollList, View};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 
 use crate::consoles::ConsoleMapper;
 use crate::entry::game::Game;
+use crate::view::entry_list::{CoreSelection, MenuEntry};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RecentsCarouselState {
@@ -33,6 +34,9 @@ pub struct RecentsCarousel {
     screenshot: Image,
     game_name: Label<String>,
     button_hints: ButtonHints<String>,
+    menu: Option<ScrollList>,
+    menu_entries: Vec<MenuEntry>,
+    core: Option<CoreSelection>,
     dirty: bool,
 }
 
@@ -100,6 +104,9 @@ impl RecentsCarousel {
             screenshot,
             game_name,
             button_hints,
+            menu: None,
+            menu_entries: Vec::new(),
+            core: None,
             dirty: true,
         };
 
@@ -213,6 +220,66 @@ impl RecentsCarousel {
         }
         Ok(())
     }
+
+    fn open_menu(&mut self) -> Result<()> {
+        let Some(game) = self.games.get(self.selected) else {
+            return Ok(());
+        };
+
+        let Rect { x, y, w, h } = self.rect;
+        let styles = self.res.get::<Stylesheet>();
+        let locale = self.res.get::<Locale>();
+
+        let mut entries = vec![
+            MenuEntry::Favorite(game.favorite),
+            MenuEntry::Launch(None),
+            MenuEntry::Reset,
+            MenuEntry::RemoveFromRecents,
+            MenuEntry::RepopulateDatabase,
+        ];
+
+        let cores = self
+            .res
+            .get::<ConsoleMapper>()
+            .get_console(&game.path)
+            .map(|c| c.cores.clone())
+            .unwrap_or_default();
+
+        if !cores.is_empty() {
+            let core = game.core.to_owned().unwrap_or_else(|| cores[0].clone());
+            let i = cores.iter().position(|c| c == &core).unwrap_or_default();
+
+            if let MenuEntry::Launch(ref mut launch_core) = entries[1] {
+                let console_mapper = self.res.get::<ConsoleMapper>();
+                *launch_core = Some(console_mapper.get_core_name(&core));
+            }
+
+            self.core = Some(CoreSelection { core: i, cores });
+        } else {
+            self.core = None;
+        }
+
+        let height = entries.len() as u32
+            * (styles.ui.ui_font.size + styles.ui.list_margin as u32 + styles.ui.padding_y as u32);
+
+        let mut menu = ScrollList::new(
+            self.res.clone(),
+            Rect::new(
+                x + styles.ui.margin_x + (w as i32 - styles.ui.margin_x * 2) / 6,
+                (y + h as i32 - height as i32) / 2,
+                (w - styles.ui.margin_x as u32 * 2) * 2 / 3,
+                height,
+            ),
+            entries.iter().map(|e| e.text(&locale)).collect(),
+            Alignment::Left,
+            styles.ui.ui_font.size + styles.ui.padding_y as u32,
+        );
+        menu.set_background_color(Some(StylesheetColor::BackgroundHighlightBlend));
+        self.menu = Some(menu);
+        self.menu_entries = entries;
+
+        Ok(())
+    }
 }
 
 #[async_trait(?Send)]
@@ -223,6 +290,30 @@ impl View for RecentsCarousel {
         styles: &Stylesheet,
     ) -> Result<bool> {
         let mut drawn = false;
+
+        if let Some(menu) = &mut self.menu {
+            if menu.should_draw() {
+                let mut rect = menu.bounding_box(styles);
+                rect.y -= styles.ui.margin_x;
+                rect.h += styles.ui.margin_x as u32 * 2;
+                rect.x -= styles.ui.margin_x * 2;
+                rect.w += styles.ui.margin_x as u32 * 4;
+                rect = rect.intersection(&display.bounding_box());
+
+                let radius = (styles.ui.ui_font.size + styles.ui.margin_y as u32) / 2;
+                common::display::fill_rounded_rect(
+                    &mut display.pixmap_mut(),
+                    rect,
+                    radius,
+                    StylesheetColor::BackgroundHighlightBlend.to_color(styles),
+                );
+
+                menu.set_should_draw();
+                menu.draw(display, styles)?;
+                drawn = true;
+            }
+            return Ok(drawn);
+        }
 
         if self.dirty {
             display.load(self.rect)?;
@@ -258,7 +349,10 @@ impl View for RecentsCarousel {
     }
 
     fn should_draw(&self) -> bool {
-        self.dirty
+        self.menu
+            .as_ref()
+            .is_some_and(common::view::View::should_draw)
+            || self.dirty
             || self.screenshot.should_draw()
             || self.game_name.should_draw()
             || self.button_hints.should_draw()
@@ -266,6 +360,9 @@ impl View for RecentsCarousel {
 
     fn set_should_draw(&mut self) {
         self.dirty = true;
+        if let Some(menu) = self.menu.as_mut() {
+            menu.set_should_draw();
+        }
         self.screenshot.set_should_draw();
         self.game_name.set_should_draw();
         self.button_hints.set_should_draw();
@@ -275,26 +372,143 @@ impl View for RecentsCarousel {
         &mut self,
         event: KeyEvent,
         commands: Sender<Command>,
-        _bubble: &mut VecDeque<Command>,
+        bubble: &mut VecDeque<Command>,
     ) -> Result<bool> {
-        match event {
-            KeyEvent::Pressed(Key::Up) | KeyEvent::Autorepeat(Key::Up) => {
-                self.navigate_up()?;
-                Ok(true)
+        if let Some(menu) = self.menu.as_mut() {
+            match event {
+                KeyEvent::Pressed(Key::Left) => {
+                    if let Some(core) = self.core.as_mut() {
+                        let selected = &mut self.menu_entries[menu.selected()];
+                        if let MenuEntry::Launch(launch_core) = selected {
+                            core.core = core.core.saturating_sub(1);
+                            let console_mapper = self.res.get::<ConsoleMapper>();
+                            *launch_core =
+                                Some(console_mapper.get_core_name(&core.cores[core.core]));
+                            menu.set_item(menu.selected(), selected.text(&self.res.get()));
+                        }
+                    }
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::Right) => {
+                    if let Some(core) = self.core.as_mut() {
+                        let selected = &mut self.menu_entries[menu.selected()];
+                        if let MenuEntry::Launch(launch_core) = selected {
+                            core.core = (core.core + 1).min(core.cores.len() - 1);
+                            let console_mapper = self.res.get::<ConsoleMapper>();
+                            *launch_core =
+                                Some(console_mapper.get_core_name(&core.cores[core.core]));
+                            menu.set_item(menu.selected(), selected.text(&self.res.get()));
+                        }
+                    }
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::Select | Key::B) => {
+                    self.menu = None;
+                    commands.send(Command::Redraw).await?;
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::A) => {
+                    let selected = &self.menu_entries[menu.selected()];
+                    match selected {
+                        MenuEntry::Favorite(_) => {
+                            if let Some(game) = self.games.get_mut(self.selected) {
+                                game.favorite = !game.favorite;
+                                self.res
+                                    .get::<Database>()
+                                    .set_favorite(&game.path, game.favorite)?;
+                                self.update_current_game()?;
+                            }
+                            commands.send(Command::Redraw).await?;
+                        }
+                        MenuEntry::Launch(_) => {
+                            if let Some(core) = self.core.as_ref() {
+                                if let Some(game) = self.games.get_mut(self.selected) {
+                                    let db = self.res.get::<Database>();
+                                    let core_name = &core.cores[core.core];
+                                    db.set_core(&game.path, core_name)?;
+                                    game.core = Some(core_name.to_string());
+                                }
+                            }
+                            self.core = None;
+                            self.launch_game(commands).await?;
+                        }
+                        MenuEntry::Reset => {
+                            if let Some(game) = self.games.get_mut(self.selected) {
+                                let command = self.res.get::<ConsoleMapper>().launch_game(
+                                    &self.res.get(),
+                                    game,
+                                    true,
+                                )?;
+                                if let Some(cmd) = command {
+                                    commands.send(cmd).await?;
+                                }
+                            }
+                            commands.send(Command::Redraw).await?;
+                        }
+                        MenuEntry::RemoveFromRecents => {
+                            if let Some(game) = self.games.get(self.selected) {
+                                if game.path.exists() {
+                                    self.res.get::<Database>().reset_game(&game.path)?;
+                                } else {
+                                    self.res.get::<Database>().delete_game(&game.path)?;
+                                }
+                                self.games = Self::load_games(&self.res)?;
+                                self.selected =
+                                    self.selected.min(self.games.len().saturating_sub(1));
+                                self.update_current_game()?;
+                                commands.send(Command::Redraw).await?;
+                            }
+                        }
+                        MenuEntry::RepopulateDatabase => {
+                            commands.send(Command::Redraw).await?;
+                            #[cfg(not(feature = "miyoo"))]
+                            {
+                                let message =
+                                    self.res.get::<Locale>().t("populating-database");
+                                commands.send(Command::Toast(message, None)).await?;
+                            }
+                            commands.send(Command::PopulateDb).await?;
+                            #[cfg(not(feature = "miyoo"))]
+                            {
+                                commands
+                                    .send(Command::Toast(
+                                        String::new(),
+                                        Some(std::time::Duration::ZERO),
+                                    ))
+                                    .await?;
+                            }
+                            commands.send(Command::Redraw).await?;
+                        }
+                    }
+                    self.menu = None;
+                    Ok(true)
+                }
+                _ => menu.handle_key_event(event, commands, bubble).await,
             }
-            KeyEvent::Pressed(Key::Down) | KeyEvent::Autorepeat(Key::Down) => {
-                self.navigate_down()?;
-                Ok(true)
+        } else {
+            match event {
+                KeyEvent::Pressed(Key::Up) | KeyEvent::Autorepeat(Key::Up) => {
+                    self.navigate_up()?;
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::Down) | KeyEvent::Autorepeat(Key::Down) => {
+                    self.navigate_down()?;
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::A) => {
+                    self.launch_game(commands).await?;
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::X) => {
+                    commands.send(Command::StartSearch).await?;
+                    Ok(true)
+                }
+                KeyEvent::Pressed(Key::Select) => {
+                    self.open_menu()?;
+                    Ok(true)
+                }
+                _ => Ok(false),
             }
-            KeyEvent::Pressed(Key::A) => {
-                self.launch_game(commands).await?;
-                Ok(true)
-            }
-            KeyEvent::Pressed(Key::X) => {
-                commands.send(Command::StartSearch).await?;
-                Ok(true)
-            }
-            _ => Ok(false),
         }
     }
 
