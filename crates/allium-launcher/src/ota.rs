@@ -10,7 +10,7 @@ use std::sync::LazyLock;
 use std::time::Instant;
 use tokio::sync::mpsc;
 
-const GITHUB_REPOSITORY: &str = "goweiwen/Allium";
+const GITHUB_REPOSITORY: &str = "samiralam/Allium";
 const RELEASE_FILE: &str = "allium-armv7-unknown-linux-gnueabihf.zip";
 
 static UPDATE_FILE_PATH: LazyLock<PathBuf> =
