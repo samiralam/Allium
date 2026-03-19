@@ -9,7 +9,7 @@ use common::display::Display as DisplayTrait;
 use common::geom::{Alignment, Point, Rect};
 use common::locale::Locale;
 use common::platform::{DefaultPlatform, Key, KeyEvent, Platform};
-use common::power::{PowerButtonAction, PowerSettings};
+use common::power::{AutoShutdownDelay, PowerButtonAction, PowerSettings};
 use common::resources::Resources;
 use common::stylesheet::Stylesheet;
 use common::view::{ButtonHint, ButtonHints, Number, Select, SettingsList, Toggle, View};
@@ -85,6 +85,25 @@ impl Power {
                             x.to_string()
                         }
                     },
+                    Alignment::Right,
+                )),
+            ),
+            (
+                locale.t("settings-power-auto-shutdown-delay"),
+                Box::new(Select::new(
+                    Point::zero(),
+                    power_settings.auto_shutdown_delay as usize,
+                    vec![
+                        locale.t("settings-power-auto-shutdown-delay-10s"),
+                        locale.t("settings-power-auto-shutdown-delay-30s"),
+                        locale.t("settings-power-auto-shutdown-delay-60s"),
+                        locale.t("settings-power-auto-shutdown-delay-2m"),
+                        locale.t("settings-power-auto-shutdown-delay-5m"),
+                        locale.t("settings-power-auto-shutdown-delay-10m"),
+                        locale.t("settings-power-auto-shutdown-delay-30m"),
+                        locale.t("settings-power-auto-shutdown-delay-60m"),
+                        locale.t("settings-power-auto-shutdown-delay-never"),
+                    ],
                     Alignment::Right,
                 )),
             ),
@@ -205,12 +224,18 @@ impl View for Power {
                             toast_needs_restart_for_effect(&self.res, &commands).await?;
                         }
                         2 => {
+                            self.power_settings.auto_shutdown_delay =
+                                AutoShutdownDelay::from_repr(val.as_int().unwrap() as usize)
+                                    .unwrap_or_default();
+                            toast_needs_restart_for_effect(&self.res, &commands).await?;
+                        }
+                        3 => {
                             self.power_settings.power_button_action =
                                 PowerButtonAction::from_repr(val.as_int().unwrap() as usize)
                                     .unwrap_or_default();
                             toast_needs_restart_for_effect(&self.res, &commands).await?;
                         }
-                        3 => {
+                        4 => {
                             self.power_settings.lid_close_action =
                                 PowerButtonAction::from_repr(val.as_int().unwrap() as usize)
                                     .unwrap_or_default();
