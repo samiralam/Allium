@@ -26,9 +26,9 @@ pub struct EntryListState<S> {
 }
 
 #[derive(Debug)]
-pub struct CoreSelection {
-    core: usize,
-    cores: Vec<String>,
+pub(crate) struct CoreSelection {
+    pub(crate) core: usize,
+    pub(crate) cores: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -619,7 +619,7 @@ where
 }
 
 #[derive(Debug, Clone)]
-enum MenuEntry {
+pub(crate) enum MenuEntry {
     Favorite(bool),
     Launch(Option<String>),
     Reset,
@@ -628,7 +628,7 @@ enum MenuEntry {
 }
 
 impl MenuEntry {
-    fn text(&self, locale: &Locale) -> String {
+    pub(crate) fn text(&self, locale: &Locale) -> String {
         match self {
             MenuEntry::Favorite(is_favorite) => {
                 if *is_favorite {
