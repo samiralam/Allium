@@ -11,7 +11,7 @@ use chrono::{DateTime, Duration, Utc};
 use common::battery::Battery;
 use common::constants::{
     ALLIUM_GAME_INFO, ALLIUM_SD_ROOT, ALLIUM_VERSION, ALLIUMD_STATE, BATTERY_SHUTDOWN_THRESHOLD,
-    BATTERY_UPDATE_INTERVAL, BATTERY_WARNING_THRESHOLD, IDLE_TIMEOUT,
+    BATTERY_UPDATE_INTERVAL, BATTERY_WARNING_THRESHOLD,
 };
 use common::display::settings::DisplaySettings;
 use common::locale::{Locale, LocaleSettings};
@@ -539,6 +539,9 @@ impl AlliumD<DefaultPlatform> {
         let ctx = self.platform.suspend()?;
         signal(&self.main, Signal::SIGSTOP)?;
 
+        let shutdown_delay = self.power_settings.auto_shutdown_delay.to_duration()
+            .unwrap_or(std::time::Duration::MAX);
+
         loop {
             tokio::select! {
                 key_event = self.platform.poll()=> {
@@ -548,7 +551,7 @@ impl AlliumD<DefaultPlatform> {
                         break;
                     }
                 }
-                _ = tokio::time::sleep(IDLE_TIMEOUT) => {
+                _ = tokio::time::sleep(shutdown_delay) => {
                     info!("idle timeout, shutting down");
                     signal(&self.main, Signal::SIGCONT)?;
                     self.platform.unsuspend(ctx)?;
