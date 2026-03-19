@@ -122,11 +122,10 @@ impl ConsoleMapper {
     pub fn get_console_by_dir(&self, path: &Path) -> Option<&Console> {
         if let Some(name) = path.file_name().and_then(std::ffi::OsStr::to_str) {
             let name = name.to_lowercase();
-            let console = self.consoles.iter().find(|core| {
-                core.patterns
-                    .iter()
-                    .any(|s| name == s.to_lowercase())
-            });
+            let console = self
+                .consoles
+                .iter()
+                .find(|core| core.patterns.iter().any(|s| name == s.to_lowercase()));
             if console.is_some() {
                 return console;
             }
@@ -141,11 +140,10 @@ impl ConsoleMapper {
 
         if let Some(name) = path.file_name().and_then(std::ffi::OsStr::to_str) {
             let name = name.to_lowercase();
-            let console = self.consoles.iter().find(|core| {
-                core.file_name
-                    .iter()
-                    .any(|s| name == s.to_lowercase())
-            });
+            let console = self
+                .consoles
+                .iter()
+                .find(|core| core.file_name.iter().any(|s| name == s.to_lowercase()));
             if console.is_some() {
                 return console;
             }
@@ -171,8 +169,7 @@ impl ConsoleMapper {
                 let console = self.consoles.iter().find(|core| {
                     core.patterns.iter().any(|pattern| {
                         let pattern = pattern.to_lowercase();
-                        filename == pattern
-                            || filename.contains(&format!("({})", pattern))
+                        filename == pattern || filename.contains(&format!("({})", pattern))
                     })
                 });
                 if console.is_some() {

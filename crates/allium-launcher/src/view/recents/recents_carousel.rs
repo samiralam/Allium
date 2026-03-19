@@ -463,8 +463,7 @@ impl View for RecentsCarousel {
                             commands.send(Command::Redraw).await?;
                             #[cfg(not(feature = "miyoo"))]
                             {
-                                let message =
-                                    self.res.get::<Locale>().t("populating-database");
+                                let message = self.res.get::<Locale>().t("populating-database");
                                 commands.send(Command::Toast(message, None)).await?;
                             }
                             commands.send(Command::PopulateDb).await?;

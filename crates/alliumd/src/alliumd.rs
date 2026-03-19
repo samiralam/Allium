@@ -539,7 +539,10 @@ impl AlliumD<DefaultPlatform> {
         let ctx = self.platform.suspend()?;
         signal(&self.main, Signal::SIGSTOP)?;
 
-        let shutdown_delay = self.power_settings.auto_shutdown_delay.to_duration()
+        let shutdown_delay = self
+            .power_settings
+            .auto_shutdown_delay
+            .to_duration()
             .unwrap_or(std::time::Duration::MAX);
 
         loop {
