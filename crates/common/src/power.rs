@@ -1,4 +1,5 @@
 use std::fs::{self, File};
+use std::time::Duration;
 
 use anyhow::Result;
 use log::{debug, warn};
@@ -13,6 +14,8 @@ pub struct PowerSettings {
     pub lid_close_action: PowerButtonAction,
     pub auto_sleep_when_charging: bool,
     pub auto_sleep_duration_minutes: i32,
+    #[serde(default)]
+    pub auto_shutdown_delay: AutoShutdownDelay,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, FromRepr, Default)]
@@ -23,15 +26,33 @@ pub enum PowerButtonAction {
     Nothing,
 }
 
-impl PowerButtonAction {
-    pub fn suspend() -> Self {
-        PowerButtonAction::Suspend
-    }
-    pub fn shutdown() -> Self {
-        PowerButtonAction::Shutdown
-    }
-    pub fn nothing() -> Self {
-        PowerButtonAction::Nothing
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, FromRepr, Default)]
+pub enum AutoShutdownDelay {
+    Secs10,
+    Secs30,
+    Secs60,
+    Mins2,
+    #[default]
+    Mins5,
+    Mins10,
+    Mins30,
+    Mins60,
+    Never,
+}
+
+impl AutoShutdownDelay {
+    pub fn to_duration(&self) -> Option<Duration> {
+        match self {
+            AutoShutdownDelay::Secs10 => Some(Duration::from_secs(10)),
+            AutoShutdownDelay::Secs30 => Some(Duration::from_secs(30)),
+            AutoShutdownDelay::Secs60 => Some(Duration::from_secs(60)),
+            AutoShutdownDelay::Mins2 => Some(Duration::from_secs(2 * 60)),
+            AutoShutdownDelay::Mins5 => Some(Duration::from_secs(5 * 60)),
+            AutoShutdownDelay::Mins10 => Some(Duration::from_secs(10 * 60)),
+            AutoShutdownDelay::Mins30 => Some(Duration::from_secs(30 * 60)),
+            AutoShutdownDelay::Mins60 => Some(Duration::from_secs(60 * 60)),
+            AutoShutdownDelay::Never => None,
+        }
     }
 }
 
@@ -42,6 +63,7 @@ impl Default for PowerSettings {
             power_button_action: PowerButtonAction::Suspend,
             auto_sleep_when_charging: true,
             auto_sleep_duration_minutes: 5,
+            auto_shutdown_delay: AutoShutdownDelay::Mins5,
         }
     }
 }
