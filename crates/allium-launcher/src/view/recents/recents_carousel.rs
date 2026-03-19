@@ -170,7 +170,11 @@ impl RecentsCarousel {
                 .or_else(|| game.image.image().map(Path::to_owned)),
         );
         self.screenshot.set_should_draw();
-        self.game_name.set_text(game.name.clone());
+        self.game_name.set_text(if game.favorite {
+            format!("♥ {}", game.name)
+        } else {
+            game.name.clone()
+        });
         self.button_hints.set_should_draw();
 
         self.dirty = true;
