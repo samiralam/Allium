@@ -349,7 +349,7 @@ extensions = ["gg"]
 [[consoles]]
 name = "Genesis"
 cores = ["picodrive", "genesis_plus_gx"]
-patterns = ["MD"]
+patterns = ["MD", "GEN"]
 extensions = ["gen", "smd", "md"]
 
 [[consoles]]
