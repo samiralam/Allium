@@ -17,3 +17,8 @@ settings-theme-button-a-color = Button A Colour
 settings-theme-button-b-color = Button B Colour
 settings-theme-button-x-color = Button X Colour
 settings-theme-button-y-color = Button Y Colour
+
+settings-power-auto-sleep-when-charging = Disable idle timer while charging
+settings-power-auto-sleep-duration-minutes = Auto shutdown idle timer
+settings-power-auto-shutdown-delay = Auto shutdown after suspend
+settings-power-auto-shutdown-delay-never = Disabled
