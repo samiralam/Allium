@@ -66,7 +66,7 @@ impl Power {
                 locale.t("settings-power-auto-sleep-when-charging"),
                 Box::new(Toggle::new(
                     Point::zero(),
-                    power_settings.auto_sleep_when_charging,
+                    !power_settings.auto_sleep_when_charging,
                     Alignment::Right,
                 )),
             ),
@@ -82,7 +82,7 @@ impl Power {
                         if *x == 0 {
                             auto_sleep_duration_disabled_label.clone()
                         } else {
-                            x.to_string()
+                            format!("{}m", x)
                         }
                     },
                     Alignment::Right,
@@ -216,7 +216,7 @@ impl View for Power {
                 if let Command::ValueChanged(i, val) = command {
                     match i {
                         0 => {
-                            self.power_settings.auto_sleep_when_charging = val.as_bool().unwrap();
+                            self.power_settings.auto_sleep_when_charging = !val.as_bool().unwrap();
                             toast_needs_restart_for_effect(&self.res, &commands).await?;
                         }
                         1 => {
