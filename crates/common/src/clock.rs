@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::constants::ALLIUM_CLOCK_SETTINGS;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ClockSettings {
     #[serde(default)]
     pub twelve_hour: bool,
@@ -36,11 +36,5 @@ impl ClockSettings {
         let json = serde_json::to_string(&self).unwrap();
         File::create(ALLIUM_CLOCK_SETTINGS.as_path())?.write_all(json.as_bytes())?;
         Ok(())
-    }
-}
-
-impl Default for ClockSettings {
-    fn default() -> Self {
-        Self { twelve_hour: false }
     }
 }

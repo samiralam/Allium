@@ -12,7 +12,9 @@ use common::locale::Locale;
 use common::platform::{DefaultPlatform, Key, KeyEvent, Platform};
 use common::resources::Resources;
 use common::stylesheet::{Stylesheet, StylesheetColor};
-use common::view::{ButtonHint, ButtonHints, Image, ImageMode, Label, ScrollList, View};
+use common::view::{
+    ButtonHint, ButtonHints, DotIndicator, Image, ImageMode, Label, ScrollList, View,
+};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 
@@ -34,6 +36,7 @@ pub struct RecentsCarousel {
     screenshot: Image,
     game_name: Label<String>,
     button_hints: ButtonHints<String>,
+    dot_indicator: DotIndicator,
     menu: Option<ScrollList>,
     menu_entries: Vec<MenuEntry>,
     core: Option<CoreSelection>,
@@ -94,6 +97,12 @@ impl RecentsCarousel {
             Some(w - (styles.ui.margin_x * 2) as u32),
         );
 
+        let dot_indicator = DotIndicator::new(
+            Point::new(x + w as i32 - 24, y + screenshot_height as i32 / 2),
+            screenshot_height.min(200),
+            7,
+        );
+
         drop(styles);
 
         let mut carousel = Self {
@@ -104,6 +113,7 @@ impl RecentsCarousel {
             screenshot,
             game_name,
             button_hints,
+            dot_indicator,
             menu: None,
             menu_entries: Vec::new(),
             core: None,
@@ -178,13 +188,15 @@ impl RecentsCarousel {
                 .or_else(|| game.image.image().map(Path::to_owned)),
         );
         self.screenshot.set_should_draw();
-       self.game_name.set_text(if game.favorite {
+        self.game_name.set_text(if game.favorite {
             format!("♥ {}", game.name)
         } else {
             game.name.clone()
         });
         self.game_name.scroll(true);
         self.button_hints.set_should_draw();
+        self.dot_indicator
+            .set_state(self.selected, self.games.len());
 
         self.dirty = true;
         Ok(())
@@ -327,6 +339,10 @@ impl View for RecentsCarousel {
             drawn |= self.screenshot.draw(display, styles)?;
         }
 
+        if self.dot_indicator.should_draw() {
+            drawn |= self.dot_indicator.draw(display, styles)?;
+        }
+
         if self.games.is_empty() {
             let locale = self.res.get::<Locale>();
             let mut empty_label = Label::new(
@@ -357,6 +373,7 @@ impl View for RecentsCarousel {
             .is_some_and(common::view::View::should_draw)
             || self.dirty
             || self.screenshot.should_draw()
+            || self.dot_indicator.should_draw()
             || self.game_name.should_draw()
             || self.button_hints.should_draw()
     }
@@ -367,6 +384,7 @@ impl View for RecentsCarousel {
             menu.set_should_draw();
         }
         self.screenshot.set_should_draw();
+        self.dot_indicator.set_should_draw();
         self.game_name.set_should_draw();
         self.button_hints.set_should_draw();
     }
@@ -515,12 +533,18 @@ impl View for RecentsCarousel {
     }
 
     fn children(&self) -> Vec<&dyn View> {
-        vec![&self.screenshot, &self.game_name, &self.button_hints]
+        vec![
+            &self.screenshot,
+            &self.dot_indicator,
+            &self.game_name,
+            &self.button_hints,
+        ]
     }
 
     fn children_mut(&mut self) -> Vec<&mut dyn View> {
         vec![
             &mut self.screenshot,
+            &mut self.dot_indicator,
             &mut self.game_name,
             &mut self.button_hints,
         ]
