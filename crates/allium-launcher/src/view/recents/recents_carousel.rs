@@ -424,13 +424,13 @@ impl View for RecentsCarousel {
                             commands.send(Command::Redraw).await?;
                         }
                         MenuEntry::Launch(_) => {
-                            if let Some(core) = self.core.as_ref() {
-                                if let Some(game) = self.games.get_mut(self.selected) {
-                                    let db = self.res.get::<Database>();
-                                    let core_name = &core.cores[core.core];
-                                    db.set_core(&game.path, core_name)?;
-                                    game.core = Some(core_name.to_string());
-                                }
+                            if let Some(core) = self.core.as_ref()
+                                && let Some(game) = self.games.get_mut(self.selected)
+                            {
+                                let db = self.res.get::<Database>();
+                                let core_name = &core.cores[core.core];
+                                db.set_core(&game.path, core_name)?;
+                                game.core = Some(core_name.to_string());
                             }
                             self.core = None;
                             self.launch_game(commands).await?;

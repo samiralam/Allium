@@ -498,31 +498,9 @@ impl AlliumD<DefaultPlatform> {
 
         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
-        Command::new("show").arg("-c").spawn()?.wait().await?;
+        self.platform.shutdown()?;
 
-        #[allow(clippy::let_unit_value)]
-        let ctx = self.platform.suspend()?;
-
-        let mut battery = self.platform.battery()?;
-
-        loop {
-            tokio::select! {
-                key_event = self.platform.poll() => {
-                    if matches!(key_event, KeyEvent::Released(Key::Power)) {
-                        break;
-                    }
-                }
-                _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
-                    battery.update()?;
-                    if !battery.charging() {
-                        self.platform.shutdown()?;
-                    }
-                }
-            }
-        }
-
-        signal(&self.main, Signal::SIGCONT)?;
-        self.platform.unsuspend(ctx)
+        Ok(())
     }
 
     #[cfg(unix)]
