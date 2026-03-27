@@ -42,6 +42,7 @@ settings-wifi-connecting= 接続中...
 settings-clock = 日付と時刻
 settings-clock-datetime = 日付と時刻
 settings-clock-timezone = タイムゾーン
+settings-clock-12hour = 12時間表示
 
 settings-display = ディスプレイ
 settings-display-luminance = 輝度

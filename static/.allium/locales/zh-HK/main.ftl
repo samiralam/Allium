@@ -42,6 +42,7 @@ settings-wifi-connecting= 連接中...
 settings-clock = 日期和時間
 settings-clock-datetime = 日期和時間
 settings-clock-timezone = 時區
+settings-clock-12hour = 12小時制
 
 settings-display = 顯示
 settings-display-luminance = 亮度

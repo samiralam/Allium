@@ -42,6 +42,7 @@ settings-wifi-connecting= Menyambungkan...
 settings-clock = Tanggal & Jam
 settings-clock-datetime = Tanggal & Jam
 settings-clock-timezone = Zona Waktu
+settings-clock-12hour = Format 12 Jam
 
 settings-display = Layar
 settings-display-luminance = Pencahayaan
