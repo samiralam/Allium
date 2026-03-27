@@ -7,6 +7,7 @@ use chrono::Local;
 
 use tokio::sync::mpsc::Sender;
 
+use crate::clock::ClockSettings;
 use crate::constants::CLOCK_UPDATE_INTERVAL;
 use crate::display::Display;
 use crate::geom::{Alignment, Point, Rect};
@@ -18,19 +19,24 @@ use crate::view::{Command, Label, View};
 #[derive(Debug, Clone)]
 pub struct Clock {
     label: Label<String>,
+    twelve_hour: bool,
     last_updated: Instant,
 }
 
 impl Clock {
     pub fn new(res: Resources, point: Point, alignment: Alignment) -> Self {
         let styles = res.get::<Stylesheet>();
-        let mut label = Label::new(point, text(), alignment, None);
+        let twelve_hour = ClockSettings::load()
+            .map(|s| s.twelve_hour)
+            .unwrap_or(false);
+        let mut label = Label::new(point, text(twelve_hour), alignment, None);
         label.font_size(styles.status_bar.font_size);
         label.color(crate::stylesheet::StylesheetColor::StatusBar);
         label.stroke_color(crate::stylesheet::StylesheetColor::StatusBarStroke);
 
         Self {
             label,
+            twelve_hour,
             last_updated: Instant::now(),
         }
     }
@@ -40,7 +46,10 @@ impl Clock {
 impl View for Clock {
     fn update(&mut self, _dt: Duration) {
         if self.last_updated.elapsed() >= CLOCK_UPDATE_INTERVAL {
-            self.label.set_text(text());
+            self.twelve_hour = ClockSettings::load()
+                .map(|s| s.twelve_hour)
+                .unwrap_or(self.twelve_hour);
+            self.label.set_text(text(self.twelve_hour));
             self.last_updated = Instant::now();
         }
     }
@@ -88,6 +97,10 @@ impl View for Clock {
     }
 }
 
-fn text() -> String {
-    format!("{}", Local::now().format("%H:%M"))
+fn text(twelve_hour: bool) -> String {
+    if twelve_hour {
+        format!("{}", Local::now().format("%-I:%M %p"))
+    } else {
+        format!("{}", Local::now().format("%H:%M"))
+    }
 }

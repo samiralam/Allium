@@ -43,6 +43,7 @@ settings-wifi-connecting= Conectando...
 settings-clock = Fecha y Hora
 settings-clock-datetime = Fecha y Hora
 settings-clock-timezone = Zona Horaria
+settings-clock-12hour = Formato 12 Horas
 
 settings-display = Pantalla
 settings-display-luminance = Luminancia

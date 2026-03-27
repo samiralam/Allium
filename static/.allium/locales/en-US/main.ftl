@@ -50,6 +50,7 @@ settings-wifi-connecting= Connecting...
 settings-clock = Date & Time
 settings-clock-datetime = Date & Time
 settings-clock-timezone = Timezone
+settings-clock-12hour = 12-Hour Format
 
 settings-display = Display
 settings-display-luminance = Luminance

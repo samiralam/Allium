@@ -42,6 +42,7 @@ settings-wifi-connecting= Se conectează...
 settings-clock = Data și ora
 settings-clock-datetime = Data și ora
 settings-clock-timezone = Fus orar
+settings-clock-12hour = Format 12 ore
 
 settings-display = Ecran
 settings-display-luminance = Luminanță

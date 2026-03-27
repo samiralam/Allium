@@ -4,6 +4,7 @@ use std::env;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Local;
+use common::clock::ClockSettings;
 use common::command::Command;
 use common::constants::ALLIUM_TIMEZONE;
 
@@ -13,7 +14,7 @@ use common::locale::Locale;
 use common::platform::{DefaultPlatform, Key, KeyEvent, Platform};
 use common::resources::Resources;
 use common::stylesheet::Stylesheet;
-use common::view::{ButtonHint, ButtonHints, DateTime, Select, SettingsList, View};
+use common::view::{ButtonHint, ButtonHints, DateTime, Select, SettingsList, Toggle, View};
 
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -24,6 +25,7 @@ use crate::view::settings::{ChildState, SettingsChild};
 pub struct Clock {
     rect: Rect,
     timezone: usize,
+    clock_settings: ClockSettings,
     list: SettingsList,
     button_hints: ButtonHints<String>,
 }
@@ -121,6 +123,7 @@ impl Clock {
         let timezone = env::var("TZ")
             .map(|tz| TIMEZONE_VALUES.iter().position(|&s| s == tz).unwrap_or(0))
             .unwrap_or(0);
+        let clock_settings = ClockSettings::load().unwrap_or_default();
         let locale = res.get::<Locale>();
         let styles = res.get::<Stylesheet>();
 
@@ -159,6 +162,7 @@ impl Clock {
             vec![
                 locale.t("settings-clock-datetime"),
                 locale.t("settings-clock-timezone"),
+                locale.t("settings-clock-12hour"),
             ],
             vec![
                 Box::new(DateTime::new(
@@ -172,6 +176,11 @@ impl Clock {
                     TIMEZONE_NAMES.iter().map(|s| s.to_string()).collect(),
                     Alignment::Right,
                 )),
+                Box::new(Toggle::new(
+                    Point::zero(),
+                    clock_settings.twelve_hour,
+                    Alignment::Right,
+                )),
             ],
             styles.ui.ui_font.size + styles.ui.padding_y as u32,
         );
@@ -182,6 +191,7 @@ impl Clock {
         Self {
             rect,
             timezone,
+            clock_settings,
             list,
             button_hints,
         }
@@ -261,6 +271,10 @@ impl View for Clock {
                                     Alignment::Right,
                                 )),
                             );
+                        }
+                        2 => {
+                            self.clock_settings.twelve_hour = val.as_bool().unwrap();
+                            self.clock_settings.save()?;
                         }
                         _ => unreachable!("Invalid index"),
                     }

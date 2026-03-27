@@ -2,6 +2,7 @@
 #![warn(rust_2018_idioms)]
 
 pub mod battery;
+pub mod clock;
 pub mod command;
 pub mod constants;
 pub mod database;
